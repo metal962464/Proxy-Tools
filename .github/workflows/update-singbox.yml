@@ -310,8 +310,8 @@ jobs:
       GOARM: ${{ matrix.goarm }}
       GOMIPS: ${{ matrix.gomips }}
       CGO_ENABLED: 0
-      singbox-release_VERSION: ${{ needs.singbox-release.outputs.singbox_release_version }}
-      singbox-release_TAGS: ${{ needs.singbox-release.outputs.singbox_release_tags }}
+      singbox_release_VERSION: ${{ needs.singbox-release.outputs.singbox_release_version }}
+      singbox_release_TAGS: ${{ needs.singbox-release.outputs.singbox_release_tags }}
     steps:
       - name: Checkout `main`
         uses: actions/checkout@v6
@@ -326,7 +326,7 @@ jobs:
 
       - name: Build `sing-box Release` core
         id: build
-        run: go build -v -trimpath -ldflags "-checklinkname=0 -X 'github.com/sagernet/sing-box/constant.Version=${singbox-release_VERSION}' -s -w -buildid=" -tags "${singbox-release_TAGS}" ./cmd/sing-box
+        run: go build -v -trimpath -ldflags "-checklinkname=0 -X 'github.com/sagernet/sing-box/constant.Version=${singbox_release_VERSION}' -s -w -buildid=" -tags "${singbox_release_TAGS}" ./cmd/sing-box
 
       - name: Upload files to workspace
         uses: actions/upload-artifact@v6
