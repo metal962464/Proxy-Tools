@@ -1,4 +1,4 @@
-name: Update sing-box-all
+name: Update sing-box
 on:
   workflow_dispatch:
   schedule:
