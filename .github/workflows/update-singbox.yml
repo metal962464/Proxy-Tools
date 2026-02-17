@@ -190,6 +190,10 @@ jobs:
           - { name: linux-mips-softfloat, goos: linux, goarch: mips, gomips: softfloat }
           - { name: linux-mipsle-softfloat, goos: linux, goarch: mipsle, gomips: softfloat }
           - { name: linux-mipsle-hardfloat, goos: linux, goarch: mipsle, gomips: hardfloat }
+          # windows
+          - { name: windows-amd64-v1, goos: windows, goarch: amd64, goamd64: v1 }
+          - { name: windows-amd64-v3, goos: windows, goarch: amd64, goamd64: v3 }
+          - { name: windows-arm64, goos: windows, goarch: arm64 }
 
       fail-fast: false
     needs:
@@ -218,53 +222,12 @@ jobs:
 
       - name: Build `sing-box reF1nd-dev` core
         id: build
-        run: go build -v -trimpath -ldflags "-checklinkname=0 -X 'github.com/sagernet/sing-box/constant.Version=${ref1nd_dev_VERSION}' -s -w -buildid=" -tags "${ref1nd_dev_TAGS}" ./cmd/sing-box
-
-      - name: Upload files to workspace
-        uses: actions/upload-artifact@v6
-        with:
-          name: sing-box-ref1nd-dev-${{ matrix.name }}
-          path: sing-box*
-
-  ref1nd-dev_windows:
-    runs-on: windows-latest
-    if: ${{ needs.ref1nd-dev.outputs.ref1nd_dev_skip_update != 'true' }}
-    strategy:
-      matrix:
-        include:
-          - { name: windows-amd64-v1, goarch: amd64, goamd64: v1 }
-          - { name: windows-amd64-v3, goarch: amd64, goamd64: v3 }
-          - { name: windows-arm64, goarch: arm64 }
-      fail-fast: false
-    needs:
-      - go
-      - ref1nd-dev
-    env:
-      GOAMD64: ${{ matrix.goamd64 }}
-      CGO_ENABLED: 0
-    steps:
-      - name: Checkout `reF1nd-dev`
-        uses: actions/checkout@v6
-        with:
-          repository: reF1nd/sing-box
-          ref: reF1nd-dev
-
-      - name: Setup `Go`
-        uses: actions/setup-go@v6
-        with:
-          go-version: ${{ needs.go.outputs.go_version }}
-
-      - name: Build `sing-box reF1nd-dev` core
         run: |
-          $VERSION = "${{ needs.ref1nd-dev.outputs.ref1nd_dev_version }}"
-          $TAGS = "${{ needs.ref1nd-dev.outputs.ref1nd_dev_tags }}"
-          go build -v -trimpath -o sing-box.exe `
-            -tags "$TAGS" `
-            -ldflags "-checklinkname=0 -X 'github.com/sagernet/sing-box/constant.Version=$VERSION' -s -w -buildid=" `
-            ./cmd/sing-box
-        env:
-          GOOS: windows
-          GOARCH: ${{ matrix.goarch }}
+          BUILD_TAGS="${ref1nd_dev_TAGS}"
+          if [ "${GOOS}" = "windows" ]; then
+            BUILD_TAGS=$(echo "${BUILD_TAGS}" | sed 's/,badlinkname//' | sed 's/,tfogo_checklinkname0//')
+          fi
+          go build -v -trimpath -ldflags "-checklinkname=0 -X 'github.com/sagernet/sing-box/constant.Version=${ref1nd_dev_VERSION}' -s -w -buildid=" -tags "${BUILD_TAGS}" ./cmd/sing-box
 
       - name: Upload files to workspace
         uses: actions/upload-artifact@v6
@@ -438,6 +401,10 @@ jobs:
           - { name: linux-mips-softfloat, goos: linux, goarch: mips, gomips: softfloat }
           - { name: linux-mipsle-softfloat, goos: linux, goarch: mipsle, gomips: softfloat }
           - { name: linux-mipsle-hardfloat, goos: linux, goarch: mipsle, gomips: hardfloat }
+          # windows
+          - { name: windows-amd64-v1, goos: windows, goarch: amd64, goamd64: v1 }
+          - { name: windows-amd64-v3, goos: windows, goarch: amd64, goamd64: v3 }
+          - { name: windows-arm64, goos: windows, goarch: arm64 }
 
       fail-fast: false
     needs:
@@ -466,53 +433,12 @@ jobs:
 
       - name: Build `sing-box Dev` core
         id: build
-        run: go build -v -trimpath -ldflags "-checklinkname=0 -X 'github.com/sagernet/sing-box/constant.Version=${singbox_dev_VERSION}' -s -w -buildid=" -tags "${singbox_dev_TAGS}" ./cmd/sing-box
-
-      - name: Upload files to workspace
-        uses: actions/upload-artifact@v6
-        with:
-          name: sing-box-dev-${{ matrix.name }}
-          path: sing-box*
-
-  singbox-dev_windows:
-    runs-on: windows-latest
-    if: ${{ needs.singbox-dev.outputs.singbox_dev_skip_update != 'true' }}
-    strategy:
-      matrix:
-        include:
-          - { name: windows-amd64-v1, goarch: amd64, goamd64: v1 }
-          - { name: windows-amd64-v3, goarch: amd64, goamd64: v3 }
-          - { name: windows-arm64, goarch: arm64 }
-      fail-fast: false
-    needs:
-      - go
-      - singbox-dev
-    env:
-      GOAMD64: ${{ matrix.goamd64 }}
-      CGO_ENABLED: 0
-    steps:
-      - name: Checkout `dev`
-        uses: actions/checkout@v6
-        with:
-          repository: SagerNet/sing-box
-          ref: dev
-
-      - name: Setup `Go`
-        uses: actions/setup-go@v6
-        with:
-          go-version: ${{ needs.go.outputs.go_version }}
-
-      - name: Build `sing-box Dev` core
         run: |
-          $VERSION = "${{ needs.singbox-dev.outputs.singbox_dev_version }}"
-          $TAGS = "${{ needs.singbox-dev.outputs.singbox_dev_tags }}"
-          go build -v -trimpath -o sing-box.exe `
-            -tags "$TAGS" `
-            -ldflags "-checklinkname=0 -X 'github.com/sagernet/sing-box/constant.Version=$VERSION' -s -w -buildid=" `
-            ./cmd/sing-box
-        env:
-          GOOS: windows
-          GOARCH: ${{ matrix.goarch }}
+          BUILD_TAGS="${singbox_dev_TAGS}"
+          if [ "${GOOS}" = "windows" ]; then
+            BUILD_TAGS=$(echo "${BUILD_TAGS}" | sed 's/,badlinkname//' | sed 's/,tfogo_checklinkname0//')
+          fi
+          go build -v -trimpath -ldflags "-checklinkname=0 -X 'github.com/sagernet/sing-box/constant.Version=${singbox_dev_VERSION}' -s -w -buildid=" -tags "${BUILD_TAGS}" ./cmd/sing-box
 
       - name: Upload files to workspace
         uses: actions/upload-artifact@v6
@@ -531,12 +457,10 @@ jobs:
       - ref1nd-main_cross
       - ref1nd-dev
       - ref1nd-dev_cross
-      - ref1nd-dev_windows
       - singbox-release
       - singbox-release_cross
       - singbox-dev
       - singbox-dev_cross
-      - singbox-dev_windows
     env:
       ref1nd_main_VERSION: ${{ needs.ref1nd-main.outputs.ref1nd_main_version }}
       ref1nd_main_TIME: ${{ needs.ref1nd-main.outputs.ref1nd_main_time }}
