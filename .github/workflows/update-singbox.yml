@@ -22,7 +22,7 @@ jobs:
       - name: Get `Go` latest version
         id: go
         run: |
-          echo "version=$(curl -sSL https://raw.githubusercontent.com/actions/go-versions/update-versions-manifest-file/versions-manifest.json | jq -r '.[0].version')" >> $GITHUB_OUTPUT
+          echo "version=$(curl -sSL https://raw.githubusercontent.com/actions/go-versions/update-versions-manifest-file/versions-manifest.json | jq -r '[.[].version | select(startswith("1.25"))][0]')" >> $GITHUB_OUTPUT
 
   # --------------------------------------------------------------------------------
   # Job: reF1nd-main
@@ -222,12 +222,7 @@ jobs:
 
       - name: Build `sing-box reF1nd-dev` core
         id: build
-        run: |
-          BUILD_TAGS="${ref1nd_dev_TAGS}"
-          if [ "${GOOS}" = "windows" ]; then
-            BUILD_TAGS=$(echo "${BUILD_TAGS}" | sed 's/,badlinkname//' | sed 's/,tfogo_checklinkname0//')
-          fi
-          go build -v -trimpath -ldflags "-checklinkname=0 -X 'github.com/sagernet/sing-box/constant.Version=${ref1nd_dev_VERSION}' -s -w -buildid=" -tags "${BUILD_TAGS}" ./cmd/sing-box
+        run: go build -v -trimpath -ldflags "-checklinkname=0 -X 'github.com/sagernet/sing-box/constant.Version=${ref1nd_dev_VERSION}' -s -w -buildid=" -tags "${ref1nd_dev_TAGS}" ./cmd/sing-box
 
       - name: Upload files to workspace
         uses: actions/upload-artifact@v6
@@ -433,12 +428,7 @@ jobs:
 
       - name: Build `sing-box Dev` core
         id: build
-        run: |
-          BUILD_TAGS="${singbox_dev_TAGS}"
-          if [ "${GOOS}" = "windows" ]; then
-            BUILD_TAGS=$(echo "${BUILD_TAGS}" | sed 's/,badlinkname//' | sed 's/,tfogo_checklinkname0//')
-          fi
-          go build -v -trimpath -ldflags "-checklinkname=0 -X 'github.com/sagernet/sing-box/constant.Version=${singbox_dev_VERSION}' -s -w -buildid=" -tags "${BUILD_TAGS}" ./cmd/sing-box
+        run: go build -v -trimpath -ldflags "-checklinkname=0 -X 'github.com/sagernet/sing-box/constant.Version=${singbox_dev_VERSION}' -s -w -buildid=" -tags "${singbox_dev_TAGS}" ./cmd/sing-box
 
       - name: Upload files to workspace
         uses: actions/upload-artifact@v6
