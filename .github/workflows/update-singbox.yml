@@ -157,7 +157,7 @@ jobs:
           echo "ref1nd_dev_version=$(git tag -l --sort=v:refname | grep -Po '^v\K.*(alpha|beta|rc).*-reF1nd.*' | tail -n1)" >> $GITHUB_OUTPUT
           echo "ref1nd_dev_time=$(git log -1 --format=%cd --date=format:'%Y-%m-%d' $(echo "$ref1nd_dev_version" | awk -F '-' '{print $3}'))" >> $GITHUB_OUTPUT
           # 功能 Tags
-          echo "ref1nd_dev_tags=with_gvisor,with_quic,with_dhcp,with_wireguard,with_utls,with_acme,with_clash_api,with_tailscale" >> $GITHUB_OUTPUT
+          echo "ref1nd_dev_tags=with_gvisor,with_quic,with_dhcp,with_wireguard,with_utls,with_acme,with_clash_api,with_tailscale,badlinkname,tfogo_checklinkname0" >> $GITHUB_OUTPUT
 
       - name: Compare `sing-box reF1nd-dev` versions with current release
         id: compare
@@ -190,10 +190,6 @@ jobs:
           - { name: linux-mips-softfloat, goos: linux, goarch: mips, gomips: softfloat }
           - { name: linux-mipsle-softfloat, goos: linux, goarch: mipsle, gomips: softfloat }
           - { name: linux-mipsle-hardfloat, goos: linux, goarch: mipsle, gomips: hardfloat }
-          # windows
-          - { name: windows-amd64-v1, goos: windows, goarch: amd64, goamd64: v1 }
-          - { name: windows-amd64-v3, goos: windows, goarch: amd64, goamd64: v3 }
-          - { name: windows-arm64, goos: windows, goarch: arm64 }
 
       fail-fast: false
     needs:
@@ -230,6 +226,51 @@ jobs:
           name: sing-box-ref1nd-dev-${{ matrix.name }}
           path: sing-box*
 
+  ref1nd-dev_windows:
+    runs-on: windows-latest
+    if: ${{ needs.ref1nd-dev.outputs.ref1nd_dev_skip_update != 'true' }}
+    strategy:
+      matrix:
+        include:
+          - { name: windows-amd64-v1, goarch: amd64, goamd64: v1 }
+          - { name: windows-amd64-v3, goarch: amd64, goamd64: v3 }
+          - { name: windows-arm64, goarch: arm64 }
+      fail-fast: false
+    needs:
+      - go
+      - ref1nd-dev
+    env:
+      GOAMD64: ${{ matrix.goamd64 }}
+      CGO_ENABLED: 0
+    steps:
+      - name: Checkout `reF1nd-dev`
+        uses: actions/checkout@v6
+        with:
+          repository: reF1nd/sing-box
+          ref: reF1nd-dev
+
+      - name: Setup `Go`
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ needs.go.outputs.go_version }}
+
+      - name: Build `sing-box reF1nd-dev` core
+        run: |
+          $VERSION = "${{ needs.ref1nd-dev.outputs.ref1nd_dev_version }}"
+          $TAGS = "${{ needs.ref1nd-dev.outputs.ref1nd_dev_tags }}"
+          go build -v -trimpath -o sing-box.exe `
+            -tags "$TAGS" `
+            -ldflags "-checklinkname=0 -X 'github.com/sagernet/sing-box/constant.Version=$VERSION' -s -w -buildid=" `
+            ./cmd/sing-box
+        env:
+          GOOS: windows
+          GOARCH: ${{ matrix.goarch }}
+
+      - name: Upload files to workspace
+        uses: actions/upload-artifact@v6
+        with:
+          name: sing-box-ref1nd-dev-${{ matrix.name }}
+          path: sing-box*
 
   # --------------------------------------------------------------------------------
   # Job: singbox-release (Official Source)
@@ -364,7 +405,7 @@ jobs:
           echo "singbox_dev_version=$(curl -sSL https://api.github.com/repos/SagerNet/sing-box/releases | jq -r '.[] | select(.tag_name | test("(alpha|beta|rc)")) | .tag_name' | head -n 1 | sed 's/^v//')" >> $GITHUB_OUTPUT
           echo "singbox_dev_time=$(curl -sSL https://api.github.com/repos/SagerNet/sing-box/releases | jq -r '.[] | select(.tag_name | test("(alpha|beta|rc)")) | .created_at' | head -n 1 | xargs -I {} date -d '{} +8 hours' '+%Y-%m-%d')" >> $GITHUB_OUTPUT
           # 功能 Tags
-          echo "singbox_dev_tags=with_gvisor,with_quic,with_dhcp,with_wireguard,with_utls,with_acme,with_clash_api,with_tailscale" >> $GITHUB_OUTPUT
+          echo "singbox_dev_tags=with_gvisor,with_quic,with_dhcp,with_wireguard,with_utls,with_acme,with_clash_api,with_tailscale,badlinkname,tfogo_checklinkname0" >> $GITHUB_OUTPUT
 
       - name: Compare `sing-box Dev` versions with current release
         id: compare
@@ -397,10 +438,6 @@ jobs:
           - { name: linux-mips-softfloat, goos: linux, goarch: mips, gomips: softfloat }
           - { name: linux-mipsle-softfloat, goos: linux, goarch: mipsle, gomips: softfloat }
           - { name: linux-mipsle-hardfloat, goos: linux, goarch: mipsle, gomips: hardfloat }
-          # windows
-          - { name: windows-amd64-v1, goos: windows, goarch: amd64, goamd64: v1 }
-          - { name: windows-amd64-v3, goos: windows, goarch: amd64, goamd64: v3 }
-          - { name: windows-arm64, goos: windows, goarch: arm64 }
 
       fail-fast: false
     needs:
@@ -437,6 +474,52 @@ jobs:
           name: sing-box-dev-${{ matrix.name }}
           path: sing-box*
 
+  singbox-dev_windows:
+    runs-on: windows-latest
+    if: ${{ needs.singbox-dev.outputs.singbox_dev_skip_update != 'true' }}
+    strategy:
+      matrix:
+        include:
+          - { name: windows-amd64-v1, goarch: amd64, goamd64: v1 }
+          - { name: windows-amd64-v3, goarch: amd64, goamd64: v3 }
+          - { name: windows-arm64, goarch: arm64 }
+      fail-fast: false
+    needs:
+      - go
+      - singbox-dev
+    env:
+      GOAMD64: ${{ matrix.goamd64 }}
+      CGO_ENABLED: 0
+    steps:
+      - name: Checkout `dev`
+        uses: actions/checkout@v6
+        with:
+          repository: SagerNet/sing-box
+          ref: dev
+
+      - name: Setup `Go`
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ needs.go.outputs.go_version }}
+
+      - name: Build `sing-box Dev` core
+        run: |
+          $VERSION = "${{ needs.singbox-dev.outputs.singbox_dev_version }}"
+          $TAGS = "${{ needs.singbox-dev.outputs.singbox_dev_tags }}"
+          go build -v -trimpath -o sing-box.exe `
+            -tags "$TAGS" `
+            -ldflags "-checklinkname=0 -X 'github.com/sagernet/sing-box/constant.Version=$VERSION' -s -w -buildid=" `
+            ./cmd/sing-box
+        env:
+          GOOS: windows
+          GOARCH: ${{ matrix.goarch }}
+
+      - name: Upload files to workspace
+        uses: actions/upload-artifact@v6
+        with:
+          name: sing-box-dev-${{ matrix.name }}
+          path: sing-box*
+
   # --------------------------------------------------------------------------------
   # Job: push_sing-box (Packaging & Upload)
   # --------------------------------------------------------------------------------
@@ -448,10 +531,12 @@ jobs:
       - ref1nd-main_cross
       - ref1nd-dev
       - ref1nd-dev_cross
+      - ref1nd-dev_windows
       - singbox-release
       - singbox-release_cross
       - singbox-dev
       - singbox-dev_cross
+      - singbox-dev_windows
     env:
       ref1nd_main_VERSION: ${{ needs.ref1nd-main.outputs.ref1nd_main_version }}
       ref1nd_main_TIME: ${{ needs.ref1nd-main.outputs.ref1nd_main_time }}
