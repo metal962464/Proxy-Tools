@@ -606,7 +606,7 @@ jobs:
             更新 [sing-box Release 版](https://github.com/SagerNet/sing-box/tree/main)至 v${{ env.singbox_release_VERSION }}，发布于 ${{ env.singbox_release_TIME }}
             更新 [sing-box Dev 版](https://github.com/SagerNet/sing-box/tree/dev)至 v${{ env.singbox_dev_VERSION }}，发布于 ${{ env.singbox_dev_TIME }}
 
-            ### 🛠 编译选项 (Build Tags)
+            ### 🛠 构建标签 (Build Tags)
             **sing-box reF1nd-main 版:**
             `${{ needs.ref1nd-main.outputs.ref1nd_main_tags }}`
 
