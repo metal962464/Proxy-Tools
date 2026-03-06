@@ -578,15 +578,15 @@ jobs:
 
             ### 🛠 构建标签 (Build Tags)
             **sing-box reF1nd-stable 版:**
-            `${{ needs.ref1nd-stable.outputs.ref1nd_stable_tags }}`
+            `${{ needs.ref1nd_stable.outputs.ref1nd_stable_tags }}`
 
             **sing-box reF1nd-test 版:**
-            `${{ needs.ref1nd-test.outputs.ref1nd_test_tags }}`
+            `${{ needs.ref1nd_test.outputs.ref1nd_test_tags }}`
 
             **sing-box stable 版:**
-            `${{ needs.singbox-stable.outputs.singbox_stable_tags }}`
+            `${{ needs.singbox_stable.outputs.singbox_stable_tags }}`
 
             **sing-box test 版:**
-            `${{ needs.singbox-test.outputs.singbox_test_tags }}`
+            `${{ needs.singbox_test.outputs.singbox_test_tags }}`
           file_glob: true
           file: ./sing-box/*
