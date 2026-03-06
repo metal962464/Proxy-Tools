@@ -22,7 +22,7 @@ jobs:
       - name: Get `Go` latest version
         id: go
         run: |
-          echo "version=$(curl -sSL https://raw.githubusercontent.com/actions/go-versions/update-versions-manifest-file/versions-manifest.json | jq -r '[.[].version | select(startswith("1.25"))][0]')" >> $GITHUB_OUTPUT
+          echo "version=$(curl -sSL https://raw.githubusercontent.com/actions/go-versions/update-versions-manifest-file/versions-manifest.json | jq -r '.[0].version')" >> $GITHUB_OUTPUT
 
   # --------------------------------------------------------------------------------
   # Job: reF1nd-main
@@ -229,6 +229,7 @@ jobs:
         with:
           name: sing-box-ref1nd-dev-${{ matrix.name }}
           path: sing-box*
+
 
   # --------------------------------------------------------------------------------
   # Job: singbox-release (Official Source)
