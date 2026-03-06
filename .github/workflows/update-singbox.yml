@@ -576,7 +576,7 @@ jobs:
             更新 [sing-box stable 版](https://github.com/SagerNet/sing-box/tree/stable)至 v${{ env.singbox_stable_VERSION }}，发布于 ${{ env.singbox_stable_TIME }}
             更新 [sing-box test 版](https://github.com/SagerNet/sing-box/tree/testing)至 v${{ env.singbox_test_VERSION }}，发布于 ${{ env.singbox_test_TIME }}
 
-            ### 🛠 构建标签 (Build Tags)
+            ### 🛠 构建标签 ( Build Tags )
             **sing-box reF1nd-stable 版:**
             `${{ needs.ref1nd_stable.outputs.ref1nd_stable_tags }}`
 
