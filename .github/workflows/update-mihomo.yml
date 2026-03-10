@@ -53,21 +53,16 @@ jobs:
       - name: Download `mihomo Meta` files
         if: ${{ env.mihomo_Meta_skip_update != 'true' }}
         run: |
-          # Linux
-          mkdir -p ./tmp-meta/ ./mihomo/
+          # Linux (Ready for compress cores by `UPX`)
+          mkdir -p ./mihomo/
           linux_archs=(amd64-v1 amd64-v3 armv5 armv6 armv7 arm64 mips-softfloat mipsle-softfloat mipsle-hardfloat)
           for i in "${!linux_archs[@]}"; do
-            curl -L "${download_url}/${meta_version}/mihomo-linux-${linux_archs[i]}-${meta_version}.gz" | gunzip -c > ./tmp-meta/CrashCore
-            # Compress cores by `tar.gz`
-            chmod +x ./tmp-meta/CrashCore
-            tar --no-same-owner -czf "./mihomo/mihomo-meta-linux-${linux_archs[i]}.tar.gz" -C ./tmp-meta/ CrashCore
-
-            # Ready for compress cores by `UPX`
-            mv -f ./tmp-meta/CrashCore ./mihomo/mihomo-meta-linux-${linux_archs[i]}.upx
+            curl -L "${download_url}/${meta_version}/mihomo-linux-${linux_archs[i]}-${meta_version}.gz" | gunzip -c > ./mihomo/mihomo-meta-linux-${linux_archs[i]}.upx
             chmod +x ./mihomo/mihomo-meta-linux-${linux_archs[i]}.upx
           done
 
           # Windows
+          mkdir -p ./tmp-meta/
           windows_archs=(amd64-v1 amd64-v3 arm64)
           for j in "${!windows_archs[@]}"; do
             mkdir -p "./tmp-meta/meta_windows_${windows_archs[j]}"
@@ -80,21 +75,16 @@ jobs:
       - name: Download `mihomo Alpha` files
         if: ${{ env.mihomo_Alpha_skip_update != 'true' }}
         run: |
-          # Linux
-          mkdir -p ./tmp-alpha/ ./mihomo/
+          # Linux (Ready for compress cores by `UPX`)
+          mkdir -p ./mihomo/
           linux_archs=(amd64-v1 amd64-v3 armv5 armv6 armv7 arm64 mips-softfloat mipsle-softfloat mipsle-hardfloat)
           for i in "${!linux_archs[@]}"; do
-            curl -L "${download_url}/Prerelease-Alpha/mihomo-linux-${linux_archs[i]}-${alpha_version}.gz" | gunzip -c > ./tmp-alpha/CrashCore
-            # Compress cores by `tar.gz`
-            chmod +x ./tmp-alpha/CrashCore
-            tar --no-same-owner -czf "./mihomo/mihomo-alpha-linux-${linux_archs[i]}.tar.gz" -C ./tmp-alpha/ CrashCore
-
-            # Ready for compress cores by `UPX`
-            mv -f ./tmp-alpha/CrashCore ./mihomo/mihomo-alpha-linux-${linux_archs[i]}.upx
+            curl -L "${download_url}/Prerelease-Alpha/mihomo-linux-${linux_archs[i]}-${alpha_version}.gz" | gunzip -c > ./mihomo/mihomo-alpha-linux-${linux_archs[i]}.upx
             chmod +x ./mihomo/mihomo-alpha-linux-${linux_archs[i]}.upx
           done
 
           # Windows
+          mkdir -p ./tmp-alpha/
           windows_archs=(amd64-v1 amd64-v3 arm64)
           for j in "${!windows_archs[@]}"; do
             mkdir -p "./tmp-alpha/alpha_windows_${windows_archs[j]}"
