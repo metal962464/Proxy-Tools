@@ -843,12 +843,16 @@ jobs:
     env:
       ref1nd_stable_VERSION: ${{ needs.ref1nd_stable_version.outputs.ref1nd_stable_version }}
       ref1nd_stable_TIME: ${{ needs.ref1nd_stable_version.outputs.ref1nd_stable_time }}
+      ref1nd_stable_Skip_update: ${{ needs.ref1nd_stable_version.outputs.ref1nd_stable_skip_update }}
       ref1nd_test_VERSION: ${{ needs.ref1nd_test_version.outputs.ref1nd_test_version }}
       ref1nd_test_TIME: ${{ needs.ref1nd_test_version.outputs.ref1nd_test_time }}
+      ref1nd_test_Skip_update: ${{ needs.ref1nd_test_version.outputs.ref1nd_test_skip_update }}
       singbox_stable_VERSION: ${{ needs.singbox_stable_version.outputs.singbox_stable_version }}
       singbox_stable_TIME: ${{ needs.singbox_stable_version.outputs.singbox_stable_time }}
+      singbox_stable_Skip_update: ${{ needs.singbox_stable_version.outputs.singbox_stable_skip_update }}
       singbox_test_VERSION: ${{ needs.singbox_test_version.outputs.singbox_test_version }}
       singbox_test_TIME: ${{ needs.singbox_test_version.outputs.singbox_test_time }}
+      singbox_test_Skip_update: ${{ needs.singbox_test_version.outputs.singbox_test_skip_update }}
     steps:
       - name: Clone Repository
         uses: actions/checkout@v6
@@ -859,7 +863,7 @@ jobs:
           path: ./tmp/
 
       - name: Download `sing-box reF1nd-Stable` files
-        if: ${{ needs.ref1nd_stable_version.outputs.ref1nd_stable_skip_update != 'true' }}
+        if: ${{ env.ref1nd_stable_Skip_update != 'true' }}
         run: |
           # Linux (Ready for compress cores by `UPX`)
           mkdir -p ./sing-box/
@@ -879,7 +883,7 @@ jobs:
           mv -f ./tmp/sfa-ref1nd-stable-apks/*.apk ./sing-box/
 
       - name: Download `sing-box reF1nd-Test` files
-        if: ${{ needs.ref1nd_test_version.outputs.ref1nd_test_skip_update != 'true' }}
+        if: ${{ env.ref1nd_test_Skip_update != 'true' }}
         run: |
           # Linux (Ready for compress cores by `UPX`)
           mkdir -p ./sing-box/
@@ -899,7 +903,7 @@ jobs:
           mv -f ./tmp/sfa-ref1nd-test-apks/*.apk ./sing-box/
 
       - name: Download `sing-box Stable` files
-        if: ${{ needs.singbox_stable_version.outputs.singbox_stable_skip_update != 'true' }}
+        if: ${{ env.singbox_stable_Skip_update != 'true' }}
         run: |
           # Linux (Ready for compress cores by `UPX`)
           mkdir -p ./sing-box/
@@ -916,7 +920,7 @@ jobs:
           done
 
       - name: Download `sing-box Test` files
-        if: ${{ needs.singbox_test_version.outputs.singbox_test_skip_update != 'true' }}
+        if: ${{ env.singbox_test_Skip_update != 'true' }}
         run: |
           # Linux (Ready for compress cores by `UPX`)
           mkdir -p ./sing-box/
@@ -933,7 +937,7 @@ jobs:
           done
 
       - name: Setup `UPX` and compress `sing-box` files
-        if: ${{ env.ref1nd_stable_skip_update != 'true' || env.ref1nd_test_skip_update != 'true' || env.singbox_stable_skip_update != 'true' || env.singbox_test_skip_update != 'true' }}
+        if: ${{ env.ref1nd_stable_Skip_update != 'true' || env.ref1nd_test_Skip_update != 'true' || env.singbox_stable_Skip_update != 'true' || env.singbox_test_Skip_update != 'true' }}
         uses: crazy-max/ghaction-upx@v4
         with:
           version: latest
