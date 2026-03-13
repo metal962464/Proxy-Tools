@@ -148,7 +148,7 @@ jobs:
         run: |
           echo "ref1nd_test_version=$(git tag -l --sort=v:refname | grep -Po '^v\K.*(alpha|beta|rc).*-reF1nd.*' | tail -n1)" >> $GITHUB_OUTPUT
           echo "ref1nd_test_time=$(git log -1 --format=%cd --date=format:'%Y-%m-%d' $(echo "$ref1nd_test_version" | awk -F '-' '{print $3}'))" >> $GITHUB_OUTPUT
-          echo "ref1nd_test_tags=with_gvisor,with_quic,with_dhcp,with_utls,with_clash_api,with_wireguard,with_tailscale,badlinkname,tfogo_checklinkname0" >> $GITHUB_OUTPUT
+          echo "ref1nd_test_tags=with_gvisor,with_quic,with_dhcp,with_utls,with_clash_api,with_wireguard,with_tailscale" >> $GITHUB_OUTPUT
 
       - name: Compare `sing-box reF1nd-Test` versions with current release
         id: compare
@@ -754,7 +754,7 @@ jobs:
         run: |
           echo "singbox_test_version=$(curl -sSL https://api.github.com/repos/SagerNet/sing-box/releases | jq -r '.[] | select(.tag_name | test("(alpha|beta|rc)")) | .tag_name' | head -n 1 | sed 's/^v//')" >> $GITHUB_OUTPUT
           echo "singbox_test_time=$(curl -sSL https://api.github.com/repos/SagerNet/sing-box/releases | jq -r '.[] | select(.tag_name | test("(alpha|beta|rc)")) | .created_at' | head -n 1 | xargs -I {} date -d '{} +8 hours' '+%Y-%m-%d')" >> $GITHUB_OUTPUT
-          echo "singbox_test_tags=with_gvisor,with_quic,with_dhcp,with_utls,with_clash_api,with_wireguard,with_tailscale,badlinkname,tfogo_checklinkname0" >> $GITHUB_OUTPUT
+          echo "singbox_test_tags=with_gvisor,with_quic,with_dhcp,with_utls,with_clash_api,with_wireguard,with_tailscale" >> $GITHUB_OUTPUT
 
       - name: Compare `sing-box Test` versions with current release
         id: compare
