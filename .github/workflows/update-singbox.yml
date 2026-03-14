@@ -470,7 +470,7 @@ jobs:
         run: |
           echo "singbox_stable_version=$(curl -sSL https://api.github.com/repos/SagerNet/sing-box/releases | jq -r '.[] | select(.tag_name | test("alpha") | not) | .tag_name' | head -n 1 | sed 's/^v//')" >> $GITHUB_OUTPUT
           echo "singbox_stable_time=$(curl -sSL https://api.github.com/repos/SagerNet/sing-box/releases | jq -r '.[] | select(.tag_name | test("alpha") | not) | (.published_at // .created_at)' | head -n 1 | xargs -I {} date -d '{} +8 hours' '+%Y-%m-%d')" >> $GITHUB_OUTPUT
-          echo "singbox_stable_tags=with_gvisor,with_quic,with_dhcp,with_utls,with_clash_api,with_tailscale" >> $GITHUB_OUTPUT
+          echo "singbox_stable_tags=with_gvisor,with_quic,with_dhcp,with_utls,with_clash_api,with_wireguard,with_tailscale" >> $GITHUB_OUTPUT
 
       - name: Compare `sing-box Stable` versions with current release
         id: compare
