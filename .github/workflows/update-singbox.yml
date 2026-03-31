@@ -26,7 +26,6 @@ jobs:
 
   ref1nd_stable_version:
     runs-on: ubuntu-latest
-    needs: go
     outputs:
       ref1nd_stable_version: ${{ steps.version.outputs.ref1nd_stable_version }}
       ref1nd_stable_time: ${{ steps.version.outputs.ref1nd_stable_time }}
@@ -39,11 +38,6 @@ jobs:
           repository: reF1nd/sing-box
           ref: reF1nd-stable
           fetch-depth: 0
-
-      - name: Setup `Go`
-        uses: actions/setup-go@v6
-        with:
-          go-version: ${{ needs.go.outputs.go_version }}
 
       - name: Get `sing-box reF1nd-Stable` version
         id: version
@@ -124,7 +118,6 @@ jobs:
 
   ref1nd_test_version:
     runs-on: ubuntu-latest
-    needs: go
     outputs:
       ref1nd_test_version: ${{ steps.version.outputs.ref1nd_test_version }}
       ref1nd_test_time: ${{ steps.version.outputs.ref1nd_test_time }}
@@ -137,11 +130,6 @@ jobs:
           repository: reF1nd/sing-box
           ref: reF1nd-testing
           fetch-depth: 0
-
-      - name: Setup `Go`
-        uses: actions/setup-go@v6
-        with:
-          go-version: ${{ needs.go.outputs.go_version }}
 
       - name: Get `sing-box reF1nd-Test` version
         id: version
@@ -224,7 +212,6 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ needs.ref1nd_stable_version.outputs.ref1nd_stable_skip_update != 'true' }}
     needs:
-      - go
       - ref1nd_stable_version
     steps:
       - name: Checkout `reF1nd-stable`
@@ -234,11 +221,6 @@ jobs:
           ref: reF1nd-stable
           fetch-depth: 0
           submodules: 'recursive'
-
-      - name: Setup `Go`
-        uses: actions/setup-go@v6
-        with:
-          go-version: ${{ needs.go.outputs.go_version }}
 
       - name: Setup Android NDK
         id: setup-ndk
@@ -305,7 +287,6 @@ jobs:
           KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
           ALIAS_NAME: ${{ secrets.ALIAS_NAME }}
           ALIAS_PASS: ${{ secrets.ALIAS_PASS }}
-          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
 
       - name: Prepare upload
         run: |-
@@ -324,7 +305,6 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ needs.ref1nd_test_version.outputs.ref1nd_test_skip_update != 'true' }}
     needs:
-      - go
       - ref1nd_test_version
     steps:
       - name: Checkout `reF1nd-testing`
@@ -334,11 +314,6 @@ jobs:
           ref: reF1nd-testing
           fetch-depth: 0
           submodules: 'recursive'
-
-      - name: Setup `Go`
-        uses: actions/setup-go@v6
-        with:
-          go-version: ${{ needs.go.outputs.go_version }}
 
       - name: Setup Android NDK
         id: setup-ndk
@@ -429,7 +404,6 @@ jobs:
           KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
           ALIAS_NAME: ${{ secrets.ALIAS_NAME }}
           ALIAS_PASS: ${{ secrets.ALIAS_PASS }}
-          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
 
       - name: Prepare upload
         run: |-
@@ -446,7 +420,6 @@ jobs:
 
   singbox_stable_version:
     runs-on: ubuntu-latest
-    needs: go
     outputs:
       singbox_stable_version: ${{ steps.version.outputs.singbox_stable_version }}
       singbox_stable_time: ${{ steps.version.outputs.singbox_stable_time }}
@@ -459,11 +432,6 @@ jobs:
           repository: SagerNet/sing-box
           ref: stable
           fetch-depth: 0
-
-      - name: Setup `Go`
-        uses: actions/setup-go@v6
-        with:
-          go-version: ${{ needs.go.outputs.go_version }}
 
       - name: Get `sing-box Stable` version
         id: version
@@ -544,7 +512,6 @@ jobs:
 
   singbox_test_version:
     runs-on: ubuntu-latest
-    needs: go
     outputs:
       singbox_test_version: ${{ steps.version.outputs.singbox_test_version }}
       singbox_test_time: ${{ steps.version.outputs.singbox_test_time }}
@@ -557,11 +524,6 @@ jobs:
           repository: SagerNet/sing-box
           ref: testing
           fetch-depth: 0
-
-      - name: Setup `Go`
-        uses: actions/setup-go@v6
-        with:
-          go-version: ${{ needs.go.outputs.go_version }}
 
       - name: Get `sing-box Test` version
         id: version
