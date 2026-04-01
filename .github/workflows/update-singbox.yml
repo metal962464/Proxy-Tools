@@ -226,7 +226,7 @@ jobs:
         id: setup-ndk
         uses: nttld/setup-ndk@v1
         with:
-          ndk-version: r29
+          ndk-version: r28
 
       - name: Setup OpenJDK
         run: |-
@@ -315,11 +315,14 @@ jobs:
           fetch-depth: 0
           submodules: 'recursive'
 
+      - name: Force Update Submodules
+        run: git submodule update --init --recursive --remote
+
       - name: Setup Android NDK
         id: setup-ndk
         uses: nttld/setup-ndk@v1
         with:
-          ndk-version: r29
+          ndk-version: r28
 
       - name: Setup OpenJDK
         run: |-
@@ -363,29 +366,6 @@ jobs:
               }\
               return ""\
           }' ./clients/android/app/build.gradle.kts
-
-      - name: Fix `reF1nd-testing` error with running
-        run: |-
-          proxy="./clients/android/app/src/main/java/io/nekohasekai/sfa/bg/ProxyService.kt"
-          vpn="./clients/android/app/src/main/java/io/nekohasekai/sfa/bg/VPNService.kt"
-          sed -i '/import io.nekohasekai.libbox.Notification/a import io.nekohasekai.libbox.NeighborUpdateListener' ${proxy}
-          sed -i '/import io.nekohasekai.libbox.Notification/a import io.nekohasekai.libbox.NeighborUpdateListener' ${vpn}
-          sed -i '$i \
-          \
-              override fun registerMyInterface(name: String) {}\
-          \
-              override fun startNeighborMonitor(listener: NeighborUpdateListener) {}\
-          \
-              override fun closeNeighborMonitor(listener: NeighborUpdateListener) {}\
-          ' ${proxy}
-          sed -i '$i \
-          \
-              override fun registerMyInterface(name: String) {}\
-          \
-              override fun startNeighborMonitor(listener: NeighborUpdateListener) {}\
-          \
-              override fun closeNeighborMonitor(listener: NeighborUpdateListener) {}\
-          ' ${vpn}
 
       - name: Streamline "Update" module
         run: |-
