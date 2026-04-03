@@ -32,7 +32,7 @@ jobs:
       ref1nd_stable_tags: ${{ steps.version.outputs.ref1nd_stable_tags }}
       ref1nd_stable_skip_update: ${{ steps.compare.outputs.skip_update }}
     steps:
-      - name: Checkout `reF1nd-stable`
+      - name: Checkout `reF1nd/sing-box`
         uses: actions/checkout@v6
         with:
           repository: reF1nd/sing-box
@@ -96,7 +96,7 @@ jobs:
       ref1nd_stable_VERSION: ${{ needs.ref1nd_stable_version.outputs.ref1nd_stable_version }}
       ref1nd_stable_TAGS: ${{ needs.ref1nd_stable_version.outputs.ref1nd_stable_tags }}
     steps:
-      - name: Checkout `reF1nd-stable`
+      - name: Checkout `reF1nd/sing-box`
         uses: actions/checkout@v6
         with:
           repository: reF1nd/sing-box
@@ -124,7 +124,7 @@ jobs:
       ref1nd_test_tags: ${{ steps.version.outputs.ref1nd_test_tags }}
       ref1nd_test_skip_update: ${{ steps.compare.outputs.skip_update }}
     steps:
-      - name: Checkout `reF1nd-testing`
+      - name: Checkout `reF1nd/sing-box`
         uses: actions/checkout@v6
         with:
           repository: reF1nd/sing-box
@@ -188,7 +188,7 @@ jobs:
       ref1nd_test_VERSION: ${{ needs.ref1nd_test_version.outputs.ref1nd_test_version }}
       ref1nd_test_TAGS: ${{ needs.ref1nd_test_version.outputs.ref1nd_test_tags }}
     steps:
-      - name: Checkout `reF1nd-testing`
+      - name: Checkout `reF1nd/sing-box`
         uses: actions/checkout@v6
         with:
           repository: reF1nd/sing-box
@@ -213,14 +213,24 @@ jobs:
     if: ${{ needs.ref1nd_stable_version.outputs.ref1nd_stable_skip_update != 'true' }}
     needs:
       - ref1nd_stable_version
+    env:
+      ref1nd_stable_VERSION: ${{ needs.ref1nd_stable_version.outputs.ref1nd_stable_version }}
+      ref1nd_stable_TAGS: ${{ needs.ref1nd_stable_version.outputs.ref1nd_stable_tags }}
     steps:
-      - name: Checkout `reF1nd-stable`
+      - name: Checkout `reF1nd/sing-box`
         uses: actions/checkout@v6
         with:
           repository: reF1nd/sing-box
           ref: reF1nd-stable
+          path: sing-box
           fetch-depth: 0
-          submodules: 'recursive'
+
+      - name: Checkout `reF1nd/sing-box-for-android`
+        uses: actions/checkout@v6
+        with:
+          repository: reF1nd/sing-box-for-android
+          ref: reF1nd-stable
+          path: sing-box-for-android
 
       - name: Setup Android NDK
         id: setup-ndk
@@ -233,65 +243,61 @@ jobs:
           sudo apt update && sudo apt install -y openjdk-17-jdk-headless
           /usr/lib/jvm/java-17-openjdk-amd64/bin/java --version
 
-      - name: Set tag
-        run: git tag v${{ needs.ref1nd_stable_version.outputs.ref1nd_stable_version }} -f
-
-      - name: Build library
-        run: |-
-          make lib_install
-          export PATH="$PATH:$(go env GOPATH)/bin"
-          make lib_android
-        env:
-          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
-          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
-
       - name: Gradle cache
         uses: actions/cache@v5
         with:
           path: ~/.gradle
           key: gradle-${{ hashFiles('**/*.gradle') }}
 
-      - name: Update version
-        run: |-
-          go run -v ./cmd/internal/update_android_version --ci --nightly
-
       - name: Decode Keystore
         run: |-
-          echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 -d > ./clients/android/app/release.keystore
-          sed -i '/fun getProps(propName: String): String {/,/^}/c\
-          fun getProps(propName: String): String {\
-              System.getenv(propName)?.let { return it }\
-              val propsFile = rootProject.file("local.properties")\
-              if (propsFile.exists()) {\
-                  val props = Properties()\
-                  props.load(FileInputStream(propsFile))\
-                  props.getProperty(propName)?.let { return it }\
-              }\
-              return ""\
-          }' ./clients/android/app/build.gradle.kts
+          echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 -d > ./sing-box-for-android/app/release.keystore
 
       - name: Streamline "Update" module
         run: |-
-          echo "RnJvbSAwYWU1MTEyZTkyNDAwZjQyZGMxYmQxM2QwZmVhZDMzNDY5M2NiOWMxIE1vbiBTZXAgMTcgMDA6MDA6MDAgMjAwMQpGcm9tOiByZUYxbmQgPHJlZjFuZEB0aHVuZGVyLWNsb3VkLmNjPgpEYXRlOiBXZWQsIDI0IERlYyAyMDI1IDIzOjEzOjAyICswODAwClN1YmplY3Q6IFtQQVRDSF0gPT9VVEYtOD9xP2ZlYXQ6PTIwPUU5PTlBPTkwPUU4PTk3PThGPUU4PUFFPUJFPUU3PUJEPUFFPz0KID0/VVRGLTg/cT89RTQ9Qjg9QUQ9RTc9OUE9ODQ9RTU9QkE9OTQ9RTc9OTQ9QTg9RTU9ODU9QTU9RTU9OEY9QTM9RTU9Qjk9QjY/PQogPT9VVEYtOD9xPz1FNz1BNj04MT1FNz05ND1BOD1FOD04Nz1BQT1FNT04QT1BOD1FNj05Qj1CND1FNj05Nj1CMD1FNT04QT05Rj89CiA9P1VURi04P3E/PUU4PTgzPUJEPz0KTUlNRS1WZXJzaW9uOiAxLjAKQ29udGVudC1UeXBlOiB0ZXh0L3BsYWluOyBjaGFyc2V0PVVURi04CkNvbnRlbnQtVHJhbnNmZXItRW5jb2Rpbmc6IDhiaXQKCi0g6ZqQ6JeP6K6+572u6aG16Z2i5Lit5bqU55So5Y2h54mH77yM5LiN5Yig6Zmk5Luj56CB5LuF5bGP6JS95YWl5Y+jCi0g56aB55So5omL5Yqo5qOA5p+l5pu05paw5oyJ6ZKu5ZKM6Ieq5Yqo5pu05paw5byA5YWzCi0g56aB55So5bqU55So5ZCv5Yqo5pe255qE6Ieq5Yqo5pu05paw5qOA5p+lCi0tLQogLi4uL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2UvTWFpbkFjdGl2aXR5Lmt0IHwgMTMgKysrKysrKysrKysrKwogLi4uL2NvbXBvc2Uvc2NyZWVuL3NldHRpbmdzL0FwcFNldHRpbmdzU2NyZWVuLmt0ICAgIHwgIDggKysrLS0tLS0KIC4uLi9zZmEvY29tcG9zZS9zY3JlZW4vc2V0dGluZ3MvU2V0dGluZ3NTY3JlZW4ua3QgICB8ICA3IC0tLS0tLS0KIDMgZmlsZXMgY2hhbmdlZCwgMTYgaW5zZXJ0aW9ucygrKSwgMTIgZGVsZXRpb25zKC0pCgpkaWZmIC0tZ2l0IGEvY2xpZW50cy9hbmRyb2lkL2FwcC9zcmMvbWFpbi9qYXZhL2lvL25la29oYXNla2FpL3NmYS9jb21wb3NlL01haW5BY3Rpdml0eS5rdCBiL2NsaWVudHMvYW5kcm9pZC9hcHAvc3JjL21haW4vamF2YS9pby9uZWtvaGFzZWthaS9zZmEvY29tcG9zZS9NYWluQWN0aXZpdHkua3QKaW5kZXggNTc0NDIyYi4uMWIxYjZjOSAxMDA2NDQKLS0tIGEvY2xpZW50cy9hbmRyb2lkL2FwcC9zcmMvbWFpbi9qYXZhL2lvL25la29oYXNla2FpL3NmYS9jb21wb3NlL01haW5BY3Rpdml0eS5rdAorKysgYi9jbGllbnRzL2FuZHJvaWQvYXBwL3NyYy9tYWluL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2UvTWFpbkFjdGl2aXR5Lmt0CkBAIC0xOTEsNiArMTkxLDE1IEBAIGNsYXNzIE1haW5BY3Rpdml0eSA6CgogICAgICAgICBjb25uZWN0aW9uLnJlY29ubmVjdCgpCgorICAgICAgICAvLyDlvLrliLbnpoHnlKjoh6rliqjmm7TmlrDlip/og70KKyAgICAgICAgU2V0dGluZ3MuY2hlY2tVcGRhdGVFbmFibGVkID0gZmFsc2UKKyAgICAgICAgLy8g5qCH6K6w5Li65bey5o+Q56S66L+H77yM6Ziy5q2i5pi+56S66aaW5qyh5ZCv5Yqo55qE5pu05paw5qOA5p+l5a+56K+d5qGGCisgICAgICAgIFNldHRpbmdzLnVwZGF0ZUNoZWNrUHJvbXB0ZWQgPSB0cnVlCisgICAgICAgIC8vIOa4hemZpOS7u+S9lee8k+WtmOeahOabtOaWsOeKtuaAgQorICAgICAgICBVcGRhdGVTdGF0ZS5jbGVhcigpCisKKyAgICAgICAgLy8g6Ieq5Yqo5pu05paw5qOA5p+l5bey56aB55SoCisgICAgICAgIC8qCiAgICAgICAgIFVwZGF0ZVN0YXRlLmxvYWRGcm9tQ2FjaGUoKQogICAgICAgICBpZiAoU2V0dGluZ3MuY2hlY2tVcGRhdGVFbmFibGVkKSB7CiAgICAgICAgICAgICBsaWZlY3ljbGVTY29wZS5sYXVuY2goRGlzcGF0Y2hlcnMuSU8pIHsKQEAgLTIwMiw2ICsyMTEsNyBAQCBjbGFzcyBNYWluQWN0aXZpdHkgOgogICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgIH0KICAgICAgICAgfQorICAgICAgICAqLwoKICAgICAgICAgaGFuZGxlSW50ZW50KGludGVudCkKCkBAIC00NjUsNiArNDc1LDggQEAgY2xhc3MgTWFpbkFjdGl2aXR5IDoKICAgICAgICAgICAgICkKICAgICAgICAgfQoKKyAgICAgICAgLy8g6aaW5qyh5ZCv5Yqo55qE5pu05paw5qOA5p+l5o+Q56S65a+56K+d5qGG5bey56aB55SoCisgICAgICAgIC8qCiAgICAgICAgIC8vIEhhbmRsZSB1cGRhdGUgY2hlY2sgcHJvbXB0IGRpYWxvZyAoc2hvd24gb25seSBvbmNlIG9uIGZpcnN0IGxhdW5jaCkKICAgICAgICAgdmFyIHNob3dVcGRhdGVDaGVja1Byb21wdCBieSByZW1lbWJlciB7IG11dGFibGVTdGF0ZU9mKCFTZXR0aW5ncy51cGRhdGVDaGVja1Byb21wdGVkKSB9CiAgICAgICAgIGlmIChzaG93VXBkYXRlQ2hlY2tQcm9tcHQpIHsKQEAgLTUxMyw2ICs1MjUsNyBAQCBjbGFzcyBNYWluQWN0aXZpdHkgOgogICAgICAgICAgICAgICAgIH0sCiAgICAgICAgICAgICApCiAgICAgICAgIH0KKyAgICAgICAgKi8KCiAgICAgICAgIC8vIEhhbmRsZSB1cGRhdGUgYXZhaWxhYmxlIGRpYWxvZwogICAgICAgICB2YWwgdXBkYXRlSW5mbyBieSBVcGRhdGVTdGF0ZS51cGRhdGVJbmZvCmRpZmYgLS1naXQgYS9jbGllbnRzL2FuZHJvaWQvYXBwL3NyYy9tYWluL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2Uvc2NyZWVuL3NldHRpbmdzL0FwcFNldHRpbmdzU2NyZWVuLmt0IGIvY2xpZW50cy9hbmRyb2lkL2FwcC9zcmMvbWFpbi9qYXZhL2lvL25la29oYXNla2FpL3NmYS9jb21wb3NlL3NjcmVlbi9zZXR0aW5ncy9BcHBTZXR0aW5nc1NjcmVlbi5rdAppbmRleCA4YWE2ZDIxLi4xYzJmNzlhIDEwMDY0NAotLS0gYS9jbGllbnRzL2FuZHJvaWQvYXBwL3NyYy9tYWluL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2Uvc2NyZWVuL3NldHRpbmdzL0FwcFNldHRpbmdzU2NyZWVuLmt0CisrKyBiL2NsaWVudHMvYW5kcm9pZC9hcHAvc3JjL21haW4vamF2YS9pby9uZWtvaGFzZWthaS9zZmEvY29tcG9zZS9zY3JlZW4vc2V0dGluZ3MvQXBwU2V0dGluZ3NTY3JlZW4ua3QKQEAgLTQwMSwxMSArNDAxLDYgQEAgZnVuIEFwcFNldHRpbmdzU2NyZWVuKG5hdkNvbnRyb2xsZXI6IE5hdkNvbnRyb2xsZXIpIHsKICAgICAgICAgICAgICAgICAgICAgICAgICAgICB0aW50ID0gTWF0ZXJpYWxUaGVtZS5jb2xvclNjaGVtZS5wcmltYXJ5LAogICAgICAgICAgICAgICAgICAgICAgICAgKQogICAgICAgICAgICAgICAgICAgICB9LAotICAgICAgICAgICAgICAgICAgICB0cmFpbGluZ0NvbnRlbnQgPSB7Ci0gICAgICAgICAgICAgICAgICAgICAgICBpZiAoaGFzVXBkYXRlKSB7Ci0gICAgICAgICAgICAgICAgICAgICAgICAgICAgQmFkZ2UoY29udGFpbmVyQ29sb3IgPSBNYXRlcmlhbFRoZW1lLmNvbG9yU2NoZW1lLnByaW1hcnkpIHsgVGV4dCgiTmV3IikgfQotICAgICAgICAgICAgICAgICAgICAgICAgfQotICAgICAgICAgICAgICAgICAgICB9LAogICAgICAgICAgICAgICAgICAgICBtb2RpZmllciA9CiAgICAgICAgICAgICAgICAgICAgIE1vZGlmaWVyCiAgICAgICAgICAgICAgICAgICAgICAgICAuY2xpcChSb3VuZGVkQ29ybmVyU2hhcGUodG9wU3RhcnQgPSAxMi5kcCwgdG9wRW5kID0gMTIuZHApKSwKQEAgLTUzNSw2ICs1MzAsOCBAQCBmdW4gQXBwU2V0dGluZ3NTY3JlZW4obmF2Q29udHJvbGxlcjogTmF2Q29udHJvbGxlcikgewogICAgICAgICAgICAgfQogICAgICAgICB9CgorICAgICAgICAvLyDlt7LpmpDol4/mm7TmlrDorr7nva7lkozmk43kvZzljaHniYcKKyAgICAgICAgLyoKICAgICAgICAgU3BhY2VyKG1vZGlmaWVyID0gTW9kaWZpZXIuaGVpZ2h0KDguZHApKQoKICAgICAgICAgVGV4dCgKQEAgLTk5NSw2ICs5OTIsNyBAQCBmdW4gQXBwU2V0dGluZ3NTY3JlZW4obmF2Q29udHJvbGxlcjogTmF2Q29udHJvbGxlcikgewogICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgIH0KICAgICAgICAgfQorICAgICAgICAqLwogICAgIH0KIH0KCmRpZmYgLS1naXQgYS9jbGllbnRzL2FuZHJvaWQvYXBwL3NyYy9tYWluL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2Uvc2NyZWVuL3NldHRpbmdzL1NldHRpbmdzU2NyZWVuLmt0IGIvY2xpZW50cy9hbmRyb2lkL2FwcC9zcmMvbWFpbi9qYXZhL2lvL25la29oYXNla2FpL3NmYS9jb21wb3NlL3NjcmVlbi9zZXR0aW5ncy9TZXR0aW5nc1NjcmVlbi5rdAppbmRleCBmNDY4ZjUxLi4yYTM1MzEyIDEwMDY0NAotLS0gYS9jbGllbnRzL2FuZHJvaWQvYXBwL3NyYy9tYWluL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2Uvc2NyZWVuL3NldHRpbmdzL1NldHRpbmdzU2NyZWVuLmt0CisrKyBiL2NsaWVudHMvYW5kcm9pZC9hcHAvc3JjL21haW4vamF2YS9pby9uZWtvaGFzZWthaS9zZmEvY29tcG9zZS9zY3JlZW4vc2V0dGluZ3MvU2V0dGluZ3NTY3JlZW4ua3QKQEAgLTUxLDcgKzUxLDYgQEAgaW1wb3J0IGFuZHJvaWR4Lm5hdmlnYXRpb24uTmF2Q29udHJvbGxlcgogaW1wb3J0IGlvLm5la29oYXNla2FpLnNmYS5SCiBpbXBvcnQgaW8ubmVrb2hhc2VrYWkuc2ZhLmNvbXBvc2UudG9wYmFyLk92ZXJyaWRlVG9wQmFyCiBpbXBvcnQgaW8ubmVrb2hhc2VrYWkuc2ZhLmRhdGFiYXNlLlNldHRpbmdzCi1pbXBvcnQgaW8ubmVrb2hhc2VrYWkuc2ZhLnVwZGF0ZS5VcGRhdGVTdGF0ZQogaW1wb3J0IGlvLm5la29oYXNla2FpLnNmYS51dGlscy5Ib29rTW9kdWxlVXBkYXRlTm90aWZpZXIKIGltcG9ydCBpby5uZWtvaGFzZWthaS5zZmEudXRpbHMuSG9va1N0YXR1c0NsaWVudAoKQEAgLTY2LDcgKzY1LDYgQEAgZnVuIFNldHRpbmdzU2NyZWVuKG5hdkNvbnRyb2xsZXI6IE5hdkNvbnRyb2xsZXIpIHsKCiAgICAgdmFsIGNvbnRleHQgPSBMb2NhbENvbnRleHQuY3VycmVudAogICAgIHZhbCBzY29wZSA9IHJlbWVtYmVyQ29yb3V0aW5lU2NvcGUoKQotICAgIHZhbCBoYXNVcGRhdGUgYnkgVXBkYXRlU3RhdGUuaGFzVXBkYXRlCiAgICAgdmFsIGhvb2tTdGF0dXMgYnkgSG9va1N0YXR1c0NsaWVudC5zdGF0dXMuY29sbGVjdEFzU3RhdGUoKQogICAgIHZhbCBoYXNQZW5kaW5nUHJpdmlsZWdlRG93bmdyYWRlID0gSG9va01vZHVsZVVwZGF0ZU5vdGlmaWVyLmlzRG93bmdyYWRlKGhvb2tTdGF0dXMpCiAgICAgdmFsIGhhc1BlbmRpbmdQcml2aWxlZ2VVcGRhdGUgPSBIb29rTW9kdWxlVXBkYXRlTm90aWZpZXIuaXNVcGdyYWRlKGhvb2tTdGF0dXMpCkBAIC0xMTUsMTEgKzExMyw2IEBAIGZ1biBTZXR0aW5nc1NjcmVlbihuYXZDb250cm9sbGVyOiBOYXZDb250cm9sbGVyKSB7CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgdGludCA9IE1hdGVyaWFsVGhlbWUuY29sb3JTY2hlbWUucHJpbWFyeSwKICAgICAgICAgICAgICAgICAgICAgICAgICkKICAgICAgICAgICAgICAgICAgICAgfSwKLSAgICAgICAgICAgICAgICAgICAgdHJhaWxpbmdDb250ZW50ID0gewotICAgICAgICAgICAgICAgICAgICAgICAgaWYgKGhhc1VwZGF0ZSkgewotICAgICAgICAgICAgICAgICAgICAgICAgICAgIEJhZGdlKGNvbnRhaW5lckNvbG9yID0gTWF0ZXJpYWxUaGVtZS5jb2xvclNjaGVtZS5wcmltYXJ5KQotICAgICAgICAgICAgICAgICAgICAgICAgfQotICAgICAgICAgICAgICAgICAgICB9LAogICAgICAgICAgICAgICAgICAgICBtb2RpZmllciA9CiAgICAgICAgICAgICAgICAgICAgIE1vZGlmaWVyCiAgICAgICAgICAgICAgICAgICAgICAgICAuY2xpcChSb3VuZGVkQ29ybmVyU2hhcGUodG9wU3RhcnQgPSAxMi5kcCwgdG9wRW5kID0gMTIuZHApKQotLQoyLjUwLjEgKEFwcGxlIEdpdC0xNTUpCgo=" | base64 -d > ./streamline-update.patch
+          echo "RnJvbSAwYWU1MTEyZTkyNDAwZjQyZGMxYmQxM2QwZmVhZDMzNDY5M2NiOWMxIE1vbiBTZXAgMTcgMDA6MDA6MDAgMjAwMQpGcm9tOiByZUYxbmQgPHJlZjFuZEB0aHVuZGVyLWNsb3VkLmNjPgpEYXRlOiBXZWQsIDI0IERlYyAyMDI1IDIzOjEzOjAyICswODAwClN1YmplY3Q6IFtQQVRDSF0gPT9VVEYtOD9xP2ZlYXQ6PTIwPUU5PTlBPTkwPUU4PTk3PThGPUU4PUFFPUJFPUU3PUJEPUFFPz0KID0/VVRGLTg/cT89RTQ9Qjg9QUQ9RTc9OUE9ODQ9RTU9QkE9OTQ9RTc9OTQ9QTg9RTU9ODU9QTU9RTU9OEY9QTM9RTU9Qjk9QjY/PQogPT9VVEYtOD9xPz1FNz1BNj04MT1FNz05ND1BOD1FOD04Nz1BQT1FNT04QT1BOD1FNj05Qj1CND1FNj05Nj1CMD1FNT04QT05Rj89CiA9P1VURi04P3E/PUU4PTgzPUJEPz0KTUlNRS1WZXJzaW9uOiAxLjAKQ29udGVudC1UeXBlOiB0ZXh0L3BsYWluOyBjaGFyc2V0PVVURi04CkNvbnRlbnQtVHJhbnNmZXItRW5jb2Rpbmc6IDhiaXQKCi0g6ZqQ6JeP6K6+572u6aG16Z2i5Lit5bqU55So5Y2h54mH77yM5LiN5Yig6Zmk5Luj56CB5LuF5bGP6JS95YWl5Y+jCi0g56aB55So5omL5Yqo5qOA5p+l5pu05paw5oyJ6ZKu5ZKM6Ieq5Yqo5pu05paw5byA5YWzCi0g56aB55So5bqU55So5ZCv5Yqo5pe255qE6Ieq5Yqo5pu05paw5qOA5p+lCi0tLQogLi4uL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2UvTWFpbkFjdGl2aXR5Lmt0IHwgMTMgKysrKysrKysrKysrKwogLi4uL2NvbXBvc2Uvc2NyZWVuL3NldHRpbmdzL0FwcFNldHRpbmdzU2NyZWVuLmt0ICAgIHwgIDggKysrLS0tLS0KIC4uLi9zZmEvY29tcG9zZS9zY3JlZW4vc2V0dGluZ3MvU2V0dGluZ3NTY3JlZW4ua3QgICB8ICA3IC0tLS0tLS0KIDMgZmlsZXMgY2hhbmdlZCwgMTYgaW5zZXJ0aW9ucygrKSwgMTIgZGVsZXRpb25zKC0pCgpkaWZmIC0tZ2l0IGEvc2luZy1ib3gtZm9yLWFuZHJvaWQvYXBwL3NyYy9tYWluL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2UvTWFpbkFjdGl2aXR5Lmt0IGIvc2luZy1ib3gtZm9yLWFuZHJvaWQvYXBwL3NyYy9tYWluL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2UvTWFpbkFjdGl2aXR5Lmt0CmluZGV4IDU3NDQyMmIuLjFiMWI2YzkgMTAwNjQ0Ci0tLSBhL3NpbmctYm94LWZvci1hbmRyb2lkL2FwcC9zcmMvbWFpbi9qYXZhL2lvL25la29oYXNla2FpL3NmYS9jb21wb3NlL01haW5BY3Rpdml0eS5rdAorKysgYi9zaW5nLWJveC1mb3ItYW5kcm9pZC9hcHAvc3JjL21haW4vamF2YS9pby9uZWtvaGFzZWthaS9zZmEvY29tcG9zZS9NYWluQWN0aXZpdHkua3QKQEAgLTE5MSw2ICsxOTEsMTUgQEAgY2xhc3MgTWFpbkFjdGl2aXR5IDoKCiAgICAgICAgIGNvbm5lY3Rpb24ucmVjb25uZWN0KCkKCisgICAgICAgIC8vIOW8uuWItuemgeeUqOiHquWKqOabtOaWsOWKn+iDvQorICAgICAgICBTZXR0aW5ncy5jaGVja1VwZGF0ZUVuYWJsZWQgPSBmYWxzZQorICAgICAgICAvLyDmoIforrDkuLrlt7Lmj5DnpLrov4fvvIzpmLLmraLmmL7npLrpppbmrKHlkK/liqjnmoTmm7TmlrDmo4Dmn6Xlr7nor53moYYKKyAgICAgICAgU2V0dGluZ3MudXBkYXRlQ2hlY2tQcm9tcHRlZCA9IHRydWUKKyAgICAgICAgLy8g5riF6Zmk5Lu75L2V57yT5a2Y55qE5pu05paw54q25oCBCisgICAgICAgIFVwZGF0ZVN0YXRlLmNsZWFyKCkKKworICAgICAgICAvLyDoh6rliqjmm7TmlrDmo4Dmn6Xlt7LnpoHnlKgKKyAgICAgICAgLyoKICAgICAgICAgVXBkYXRlU3RhdGUubG9hZEZyb21DYWNoZSgpCiAgICAgICAgIGlmIChTZXR0aW5ncy5jaGVja1VwZGF0ZUVuYWJsZWQpIHsKICAgICAgICAgICAgIGxpZmVjeWNsZVNjb3BlLmxhdW5jaChEaXNwYXRjaGVycy5JTykgewpAQCAtMjAyLDYgKzIxMSw3IEBAIGNsYXNzIE1haW5BY3Rpdml0eSA6CiAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgfQogICAgICAgICB9CisgICAgICAgICovCgogICAgICAgICBoYW5kbGVJbnRlbnQoaW50ZW50KQoKQEAgLTQ2NSw2ICs0NzUsOCBAQCBjbGFzcyBNYWluQWN0aXZpdHkgOgogICAgICAgICAgICAgKQogICAgICAgICB9CgorICAgICAgICAvLyDpppbmrKHlkK/liqjnmoTmm7TmlrDmo4Dmn6Xmj5DnpLrlr7nor53moYblt7LnpoHnlKgKKyAgICAgICAgLyoKICAgICAgICAgLy8gSGFuZGxlIHVwZGF0ZSBjaGVjayBwcm9tcHQgZGlhbG9nIChzaG93biBvbmx5IG9uY2Ugb24gZmlyc3QgbGF1bmNoKQogICAgICAgICB2YXIgc2hvd1VwZGF0ZUNoZWNrUHJvbXB0IGJ5IHJlbWVtYmVyIHsgbXV0YWJsZVN0YXRlT2YoIVNldHRpbmdzLnVwZGF0ZUNoZWNrUHJvbXB0ZWQpIH0KICAgICAgICAgaWYgKHNob3dVcGRhdGVDaGVja1Byb21wdCkgewpAQCAtNTEzLDYgKzUyNSw3IEBAIGNsYXNzIE1haW5BY3Rpdml0eSA6CiAgICAgICAgICAgICAgICAgfSwKICAgICAgICAgICAgICkKICAgICAgICAgfQorICAgICAgICAqLwoKICAgICAgICAgLy8gSGFuZGxlIHVwZGF0ZSBhdmFpbGFibGUgZGlhbG9nCiAgICAgICAgIHZhbCB1cGRhdGVJbmZvIGJ5IFVwZGF0ZVN0YXRlLnVwZGF0ZUluZm8KZGlmZiAtLWdpdCBhL3NpbmctYm94LWZvci1hbmRyb2lkL2FwcC9zcmMvbWFpbi9qYXZhL2lvL25la29oYXNla2FpL3NmYS9jb21wb3NlL3NjcmVlbi9zZXR0aW5ncy9BcHBTZXR0aW5nc1NjcmVlbi5rdCBiL3NpbmctYm94LWZvci1hbmRyb2lkL2FwcC9zcmMvbWFpbi9qYXZhL2lvL25la29oYXNla2FpL3NmYS9jb21wb3NlL3NjcmVlbi9zZXR0aW5ncy9BcHBTZXR0aW5nc1NjcmVlbi5rdAppbmRleCA4YWE2ZDIxLi4xYzJmNzlhIDEwMDY0NAotLS0gYS9zaW5nLWJveC1mb3ItYW5kcm9pZC9hcHAvc3JjL21haW4vamF2YS9pby9uZWtvaGFzZWthaS9zZmEvY29tcG9zZS9zY3JlZW4vc2V0dGluZ3MvQXBwU2V0dGluZ3NTY3JlZW4ua3QKKysrIGIvc2luZy1ib3gtZm9yLWFuZHJvaWQvYXBwL3NyYy9tYWluL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2Uvc2NyZWVuL3NldHRpbmdzL0FwcFNldHRpbmdzU2NyZWVuLmt0CkBAIC00MDEsMTEgKzQwMSw2IEBAIGZ1biBBcHBTZXR0aW5nc1NjcmVlbihuYXZDb250cm9sbGVyOiBOYXZDb250cm9sbGVyKSB7CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgdGludCA9IE1hdGVyaWFsVGhlbWUuY29sb3JTY2hlbWUucHJpbWFyeSwKICAgICAgICAgICAgICAgICAgICAgICAgICkKICAgICAgICAgICAgICAgICAgICAgfSwKLSAgICAgICAgICAgICAgICAgICAgdHJhaWxpbmdDb250ZW50ID0gewotICAgICAgICAgICAgICAgICAgICAgICAgaWYgKGhhc1VwZGF0ZSkgewotICAgICAgICAgICAgICAgICAgICAgICAgICAgIEJhZGdlKGNvbnRhaW5lckNvbG9yID0gTWF0ZXJpYWxUaGVtZS5jb2xvclNjaGVtZS5wcmltYXJ5KSB7IFRleHQoIk5ldyIpIH0KLSAgICAgICAgICAgICAgICAgICAgICAgIH0KLSAgICAgICAgICAgICAgICAgICAgfSwKICAgICAgICAgICAgICAgICAgICAgbW9kaWZpZXIgPQogICAgICAgICAgICAgICAgICAgICBNb2RpZmllcgogICAgICAgICAgICAgICAgICAgICAgICAgLmNsaXAoUm91bmRlZENvcm5lclNoYXBlKHRvcFN0YXJ0ID0gMTIuZHAsIHRvcEVuZCA9IDEyLmRwKSksCkBAIC01MzUsNiArNTMwLDggQEAgZnVuIEFwcFNldHRpbmdzU2NyZWVuKG5hdkNvbnRyb2xsZXI6IE5hdkNvbnRyb2xsZXIpIHsKICAgICAgICAgICAgIH0KICAgICAgICAgfQoKKyAgICAgICAgLy8g5bey6ZqQ6JeP5pu05paw6K6+572u5ZKM5pON5L2c5Y2h54mHCisgICAgICAgIC8qCiAgICAgICAgIFNwYWNlcihtb2RpZmllciA9IE1vZGlmaWVyLmhlaWdodCg4LmRwKSkKCiAgICAgICAgIFRleHQoCkBAIC05OTUsNiArOTkyLDcgQEAgZnVuIEFwcFNldHRpbmdzU2NyZWVuKG5hdkNvbnRyb2xsZXI6IE5hdkNvbnRyb2xsZXIpIHsKICAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICB9CiAgICAgICAgIH0KKyAgICAgICAgKi8KICAgICB9CiB9CgpkaWZmIC0tZ2l0IGEvc2luZy1ib3gtZm9yLWFuZHJvaWQvYXBwL3NyYy9tYWluL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2Uvc2NyZWVuL3NldHRpbmdzL1NldHRpbmdzU2NyZWVuLmt0IGIvc2luZy1ib3gtZm9yLWFuZHJvaWQvYXBwL3NyYy9tYWluL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2Uvc2NyZWVuL3NldHRpbmdzL1NldHRpbmdzU2NyZWVuLmt0CmluZGV4IGY0NjhmNTEuLjJhMzUzMTIgMTAwNjQ0Ci0tLSBhL3NpbmctYm94LWZvci1hbmRyb2lkL2FwcC9zcmMvbWFpbi9qYXZhL2lvL25la29oYXNla2FpL3NmYS9jb21wb3NlL3NjcmVlbi9zZXR0aW5ncy9TZXR0aW5nc1NjcmVlbi5rdAorKysgYi9zaW5nLWJveC1mb3ItYW5kcm9pZC9hcHAvc3JjL21haW4vamF2YS9pby9uZWtvaGFzZWthaS9zZmEvY29tcG9zZS9zY3JlZW4vc2V0dGluZ3MvU2V0dGluZ3NTY3JlZW4ua3QKQEAgLTUxLDcgKzUxLDYgQEAgaW1wb3J0IGFuZHJvaWR4Lm5hdmlnYXRpb24uTmF2Q29udHJvbGxlcgogaW1wb3J0IGlvLm5la29oYXNla2FpLnNmYS5SCiBpbXBvcnQgaW8ubmVrb2hhc2VrYWkuc2ZhLmNvbXBvc2UudG9wYmFyLk92ZXJyaWRlVG9wQmFyCiBpbXBvcnQgaW8ubmVrb2hhc2VrYWkuc2ZhLmRhdGFiYXNlLlNldHRpbmdzCi1pbXBvcnQgaW8ubmVrb2hhc2VrYWkuc2ZhLnVwZGF0ZS5VcGRhdGVTdGF0ZQogaW1wb3J0IGlvLm5la29oYXNla2FpLnNmYS51dGlscy5Ib29rTW9kdWxlVXBkYXRlTm90aWZpZXIKIGltcG9ydCBpby5uZWtvaGFzZWthaS5zZmEudXRpbHMuSG9va1N0YXR1c0NsaWVudAoKQEAgLTY2LDcgKzY1LDYgQEAgZnVuIFNldHRpbmdzU2NyZWVuKG5hdkNvbnRyb2xsZXI6IE5hdkNvbnRyb2xsZXIpIHsKCiAgICAgdmFsIGNvbnRleHQgPSBMb2NhbENvbnRleHQuY3VycmVudAogICAgIHZhbCBzY29wZSA9IHJlbWVtYmVyQ29yb3V0aW5lU2NvcGUoKQotICAgIHZhbCBoYXNVcGRhdGUgYnkgVXBkYXRlU3RhdGUuaGFzVXBkYXRlCiAgICAgdmFsIGhvb2tTdGF0dXMgYnkgSG9va1N0YXR1c0NsaWVudC5zdGF0dXMuY29sbGVjdEFzU3RhdGUoKQogICAgIHZhbCBoYXNQZW5kaW5nUHJpdmlsZWdlRG93bmdyYWRlID0gSG9va01vZHVsZVVwZGF0ZU5vdGlmaWVyLmlzRG93bmdyYWRlKGhvb2tTdGF0dXMpCiAgICAgdmFsIGhhc1BlbmRpbmdQcml2aWxlZ2VVcGRhdGUgPSBIb29rTW9kdWxlVXBkYXRlTm90aWZpZXIuaXNVcGdyYWRlKGhvb2tTdGF0dXMpCkBAIC0xMTUsMTEgKzExMyw2IEBAIGZ1biBTZXR0aW5nc1NjcmVlbihuYXZDb250cm9sbGVyOiBOYXZDb250cm9sbGVyKSB7CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgdGludCA9IE1hdGVyaWFsVGhlbWUuY29sb3JTY2hlbWUucHJpbWFyeSwKICAgICAgICAgICAgICAgICAgICAgICAgICkKICAgICAgICAgICAgICAgICAgICAgfSwKLSAgICAgICAgICAgICAgICAgICAgdHJhaWxpbmdDb250ZW50ID0gewotICAgICAgICAgICAgICAgICAgICAgICAgaWYgKGhhc1VwZGF0ZSkgewotICAgICAgICAgICAgICAgICAgICAgICAgICAgIEJhZGdlKGNvbnRhaW5lckNvbG9yID0gTWF0ZXJpYWxUaGVtZS5jb2xvclNjaGVtZS5wcmltYXJ5KQotICAgICAgICAgICAgICAgICAgICAgICAgfQotICAgICAgICAgICAgICAgICAgICB9LAogICAgICAgICAgICAgICAgICAgICBtb2RpZmllciA9CiAgICAgICAgICAgICAgICAgICAgIE1vZGlmaWVyCiAgICAgICAgICAgICAgICAgICAgICAgICAuY2xpcChSb3VuZGVkQ29ybmVyU2hhcGUodG9wU3RhcnQgPSAxMi5kcCwgdG9wRW5kID0gMTIuZHApKQotLQoyLjUwLjEgKEFwcGxlIEdpdC0xNTUpCg==" | base64 -d > ./streamline-update.patch
           git apply ./streamline-update.patch
+
+      - name: Build library
+        run: |-
+          cd ./sing-box/
+          make lib_install
+          export PATH="$PATH:$(go env GOPATH)/bin"
+          gomobile bind -v \
+            -o libbox.aar \
+            -target android \
+            -androidapi 23 \
+            -javapkg=io.nekohasekai \
+            -libname=box \
+            -trimpath \
+            -buildvcs=false \
+            -tags="${{ env.ref1nd_stable_TAGS }}" \
+            -ldflags="-X github.com/sagernet/sing-box/constant.Version=${{ env.ref1nd_stable_VERSION }} -X internal/godebug.defaultGODEBUG=multipathtcp=0 -s -w -buildid= -checklinkname=0" \
+            ./experimental/libbox/
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+
+      - name: Prepare Android client
+        run: |-
+          mkdir -p ./sing-box-for-android/app/libs/
+          cp -f ./sing-box/*.aar ./sing-box-for-android/app/libs/
 
       - name: Build `SFA-reF1nd-Stable` apk
         run: |-
-          mkdir -p ./clients/android/app/libs/
-          cp -f  ./*.aar ./clients/android/app/libs/
-          cd ./clients/android
-          ./gradlew :app:assembleOtherRelease
+          cd ./sing-box-for-android/
+          chmod +x gradlew
+          ./gradlew :app:assembleOtherRelease \
+            -Pandroid.injected.signing.store.file=$(pwd)/app/release.keystore \
+            -Pandroid.injected.signing.store.password="${{ secrets.KEYSTORE_PASS }}" \
+            -Pandroid.injected.signing.key.alias="${{ secrets.ALIAS_NAME }}" \
+            -Pandroid.injected.signing.key.password="${{ secrets.ALIAS_PASS }}"
         env:
-          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
-          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
-          ALIAS_NAME: ${{ secrets.ALIAS_NAME }}
-          ALIAS_PASS: ${{ secrets.ALIAS_PASS }}
 
-      - name: Prepare upload
+      - name: Rename apks
         run: |-
           mkdir -p ./sfa-ref1nd-stable/
-          for file in ./clients/android/app/build/outputs/apk/other/release/*.apk; do
+          for file in ./sing-box-for-android/app/build/outputs/apk/other/release/*.apk; do
             mv -f "${file}" "./sfa-ref1nd-stable/$(basename "${file/SFA-*-reF1nd/SFA-ref1nd-stable}")"
           done
 
@@ -306,17 +312,24 @@ jobs:
     if: ${{ needs.ref1nd_test_version.outputs.ref1nd_test_skip_update != 'true' }}
     needs:
       - ref1nd_test_version
+    env:
+      ref1nd_test_VERSION: ${{ needs.ref1nd_test_version.outputs.ref1nd_test_version }}
+      ref1nd_test_TAGS: ${{ needs.ref1nd_test_version.outputs.ref1nd_test_tags }}
     steps:
-      - name: Checkout `reF1nd-testing`
+      - name: Checkout `reF1nd/sing-box`
         uses: actions/checkout@v6
         with:
           repository: reF1nd/sing-box
           ref: reF1nd-testing
+          path: sing-box
           fetch-depth: 0
-          submodules: 'recursive'
 
-      - name: Force Update Submodules
-        run: git submodule update --init --recursive --remote
+      - name: Checkout `reF1nd/sing-box-for-android`
+        uses: actions/checkout@v6
+        with:
+          repository: reF1nd/sing-box-for-android
+          ref: reF1nd-testing
+          path: sing-box-for-android
 
       - name: Setup Android NDK
         id: setup-ndk
@@ -329,66 +342,61 @@ jobs:
           sudo apt update && sudo apt install -y openjdk-17-jdk-headless
           /usr/lib/jvm/java-17-openjdk-amd64/bin/java --version
 
-      - name: Set tag
-        run: git tag v${{ needs.ref1nd_test_version.outputs.ref1nd_test_version }} -f
-
-      - name: Build library
-        run: |-
-          make lib_install
-          export PATH="$PATH:$(go env GOPATH)/bin"
-          make lib_android
-        env:
-          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
-          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
-
       - name: Gradle cache
         uses: actions/cache@v5
         with:
           path: ~/.gradle
           key: gradle-${{ hashFiles('**/*.gradle') }}
 
-      - name: Update version
-        run: |-
-          go run -v ./cmd/internal/update_android_version --ci --nightly
-
       - name: Decode Keystore
         run: |-
-          echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 -d > ./clients/android/app/release.keystore
-
-          sed -i '/fun getProps(propName: String): String {/,/^}/c\
-          fun getProps(propName: String): String {\
-              System.getenv(propName)?.let { return it }\
-              val propsFile = rootProject.file("local.properties")\
-              if (propsFile.exists()) {\
-                  val props = Properties()\
-                  props.load(FileInputStream(propsFile))\
-                  props.getProperty(propName)?.let { return it }\
-              }\
-              return ""\
-          }' ./clients/android/app/build.gradle.kts
+          echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 -d > ./sing-box-for-android/app/release.keystore
 
       - name: Streamline "Update" module
         run: |-
-          echo "RnJvbSAwYWU1MTEyZTkyNDAwZjQyZGMxYmQxM2QwZmVhZDMzNDY5M2NiOWMxIE1vbiBTZXAgMTcgMDA6MDA6MDAgMjAwMQpGcm9tOiByZUYxbmQgPHJlZjFuZEB0aHVuZGVyLWNsb3VkLmNjPgpEYXRlOiBXZWQsIDI0IERlYyAyMDI1IDIzOjEzOjAyICswODAwClN1YmplY3Q6IFtQQVRDSF0gPT9VVEYtOD9xP2ZlYXQ6PTIwPUU5PTlBPTkwPUU4PTk3PThGPUU4PUFFPUJFPUU3PUJEPUFFPz0KID0/VVRGLTg/cT89RTQ9Qjg9QUQ9RTc9OUE9ODQ9RTU9QkE9OTQ9RTc9OTQ9QTg9RTU9ODU9QTU9RTU9OEY9QTM9RTU9Qjk9QjY/PQogPT9VVEYtOD9xPz1FNz1BNj04MT1FNz05ND1BOD1FOD04Nz1BQT1FNT04QT1BOD1FNj05Qj1CND1FNj05Nj1CMD1FNT04QT05Rj89CiA9P1VURi04P3E/PUU4PTgzPUJEPz0KTUlNRS1WZXJzaW9uOiAxLjAKQ29udGVudC1UeXBlOiB0ZXh0L3BsYWluOyBjaGFyc2V0PVVURi04CkNvbnRlbnQtVHJhbnNmZXItRW5jb2Rpbmc6IDhiaXQKCi0g6ZqQ6JeP6K6+572u6aG16Z2i5Lit5bqU55So5Y2h54mH77yM5LiN5Yig6Zmk5Luj56CB5LuF5bGP6JS95YWl5Y+jCi0g56aB55So5omL5Yqo5qOA5p+l5pu05paw5oyJ6ZKu5ZKM6Ieq5Yqo5pu05paw5byA5YWzCi0g56aB55So5bqU55So5ZCv5Yqo5pe255qE6Ieq5Yqo5pu05paw5qOA5p+lCi0tLQogLi4uL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2UvTWFpbkFjdGl2aXR5Lmt0IHwgMTMgKysrKysrKysrKysrKwogLi4uL2NvbXBvc2Uvc2NyZWVuL3NldHRpbmdzL0FwcFNldHRpbmdzU2NyZWVuLmt0ICAgIHwgIDggKysrLS0tLS0KIC4uLi9zZmEvY29tcG9zZS9zY3JlZW4vc2V0dGluZ3MvU2V0dGluZ3NTY3JlZW4ua3QgICB8ICA3IC0tLS0tLS0KIDMgZmlsZXMgY2hhbmdlZCwgMTYgaW5zZXJ0aW9ucygrKSwgMTIgZGVsZXRpb25zKC0pCgpkaWZmIC0tZ2l0IGEvY2xpZW50cy9hbmRyb2lkL2FwcC9zcmMvbWFpbi9qYXZhL2lvL25la29oYXNla2FpL3NmYS9jb21wb3NlL01haW5BY3Rpdml0eS5rdCBiL2NsaWVudHMvYW5kcm9pZC9hcHAvc3JjL21haW4vamF2YS9pby9uZWtvaGFzZWthaS9zZmEvY29tcG9zZS9NYWluQWN0aXZpdHkua3QKaW5kZXggNTc0NDIyYi4uMWIxYjZjOSAxMDA2NDQKLS0tIGEvY2xpZW50cy9hbmRyb2lkL2FwcC9zcmMvbWFpbi9qYXZhL2lvL25la29oYXNla2FpL3NmYS9jb21wb3NlL01haW5BY3Rpdml0eS5rdAorKysgYi9jbGllbnRzL2FuZHJvaWQvYXBwL3NyYy9tYWluL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2UvTWFpbkFjdGl2aXR5Lmt0CkBAIC0xOTEsNiArMTkxLDE1IEBAIGNsYXNzIE1haW5BY3Rpdml0eSA6CgogICAgICAgICBjb25uZWN0aW9uLnJlY29ubmVjdCgpCgorICAgICAgICAvLyDlvLrliLbnpoHnlKjoh6rliqjmm7TmlrDlip/og70KKyAgICAgICAgU2V0dGluZ3MuY2hlY2tVcGRhdGVFbmFibGVkID0gZmFsc2UKKyAgICAgICAgLy8g5qCH6K6w5Li65bey5o+Q56S66L+H77yM6Ziy5q2i5pi+56S66aaW5qyh5ZCv5Yqo55qE5pu05paw5qOA5p+l5a+56K+d5qGGCisgICAgICAgIFNldHRpbmdzLnVwZGF0ZUNoZWNrUHJvbXB0ZWQgPSB0cnVlCisgICAgICAgIC8vIOa4hemZpOS7u+S9lee8k+WtmOeahOabtOaWsOeKtuaAgQorICAgICAgICBVcGRhdGVTdGF0ZS5jbGVhcigpCisKKyAgICAgICAgLy8g6Ieq5Yqo5pu05paw5qOA5p+l5bey56aB55SoCisgICAgICAgIC8qCiAgICAgICAgIFVwZGF0ZVN0YXRlLmxvYWRGcm9tQ2FjaGUoKQogICAgICAgICBpZiAoU2V0dGluZ3MuY2hlY2tVcGRhdGVFbmFibGVkKSB7CiAgICAgICAgICAgICBsaWZlY3ljbGVTY29wZS5sYXVuY2goRGlzcGF0Y2hlcnMuSU8pIHsKQEAgLTIwMiw2ICsyMTEsNyBAQCBjbGFzcyBNYWluQWN0aXZpdHkgOgogICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgIH0KICAgICAgICAgfQorICAgICAgICAqLwoKICAgICAgICAgaGFuZGxlSW50ZW50KGludGVudCkKCkBAIC00NjUsNiArNDc1LDggQEAgY2xhc3MgTWFpbkFjdGl2aXR5IDoKICAgICAgICAgICAgICkKICAgICAgICAgfQoKKyAgICAgICAgLy8g6aaW5qyh5ZCv5Yqo55qE5pu05paw5qOA5p+l5o+Q56S65a+56K+d5qGG5bey56aB55SoCisgICAgICAgIC8qCiAgICAgICAgIC8vIEhhbmRsZSB1cGRhdGUgY2hlY2sgcHJvbXB0IGRpYWxvZyAoc2hvd24gb25seSBvbmNlIG9uIGZpcnN0IGxhdW5jaCkKICAgICAgICAgdmFyIHNob3dVcGRhdGVDaGVja1Byb21wdCBieSByZW1lbWJlciB7IG11dGFibGVTdGF0ZU9mKCFTZXR0aW5ncy51cGRhdGVDaGVja1Byb21wdGVkKSB9CiAgICAgICAgIGlmIChzaG93VXBkYXRlQ2hlY2tQcm9tcHQpIHsKQEAgLTUxMyw2ICs1MjUsNyBAQCBjbGFzcyBNYWluQWN0aXZpdHkgOgogICAgICAgICAgICAgICAgIH0sCiAgICAgICAgICAgICApCiAgICAgICAgIH0KKyAgICAgICAgKi8KCiAgICAgICAgIC8vIEhhbmRsZSB1cGRhdGUgYXZhaWxhYmxlIGRpYWxvZwogICAgICAgICB2YWwgdXBkYXRlSW5mbyBieSBVcGRhdGVTdGF0ZS51cGRhdGVJbmZvCmRpZmYgLS1naXQgYS9jbGllbnRzL2FuZHJvaWQvYXBwL3NyYy9tYWluL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2Uvc2NyZWVuL3NldHRpbmdzL0FwcFNldHRpbmdzU2NyZWVuLmt0IGIvY2xpZW50cy9hbmRyb2lkL2FwcC9zcmMvbWFpbi9qYXZhL2lvL25la29oYXNla2FpL3NmYS9jb21wb3NlL3NjcmVlbi9zZXR0aW5ncy9BcHBTZXR0aW5nc1NjcmVlbi5rdAppbmRleCA4YWE2ZDIxLi4xYzJmNzlhIDEwMDY0NAotLS0gYS9jbGllbnRzL2FuZHJvaWQvYXBwL3NyYy9tYWluL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2Uvc2NyZWVuL3NldHRpbmdzL0FwcFNldHRpbmdzU2NyZWVuLmt0CisrKyBiL2NsaWVudHMvYW5kcm9pZC9hcHAvc3JjL21haW4vamF2YS9pby9uZWtvaGFzZWthaS9zZmEvY29tcG9zZS9zY3JlZW4vc2V0dGluZ3MvQXBwU2V0dGluZ3NTY3JlZW4ua3QKQEAgLTQwMSwxMSArNDAxLDYgQEAgZnVuIEFwcFNldHRpbmdzU2NyZWVuKG5hdkNvbnRyb2xsZXI6IE5hdkNvbnRyb2xsZXIpIHsKICAgICAgICAgICAgICAgICAgICAgICAgICAgICB0aW50ID0gTWF0ZXJpYWxUaGVtZS5jb2xvclNjaGVtZS5wcmltYXJ5LAogICAgICAgICAgICAgICAgICAgICAgICAgKQogICAgICAgICAgICAgICAgICAgICB9LAotICAgICAgICAgICAgICAgICAgICB0cmFpbGluZ0NvbnRlbnQgPSB7Ci0gICAgICAgICAgICAgICAgICAgICAgICBpZiAoaGFzVXBkYXRlKSB7Ci0gICAgICAgICAgICAgICAgICAgICAgICAgICAgQmFkZ2UoY29udGFpbmVyQ29sb3IgPSBNYXRlcmlhbFRoZW1lLmNvbG9yU2NoZW1lLnByaW1hcnkpIHsgVGV4dCgiTmV3IikgfQotICAgICAgICAgICAgICAgICAgICAgICAgfQotICAgICAgICAgICAgICAgICAgICB9LAogICAgICAgICAgICAgICAgICAgICBtb2RpZmllciA9CiAgICAgICAgICAgICAgICAgICAgIE1vZGlmaWVyCiAgICAgICAgICAgICAgICAgICAgICAgICAuY2xpcChSb3VuZGVkQ29ybmVyU2hhcGUodG9wU3RhcnQgPSAxMi5kcCwgdG9wRW5kID0gMTIuZHApKSwKQEAgLTUzNSw2ICs1MzAsOCBAQCBmdW4gQXBwU2V0dGluZ3NTY3JlZW4obmF2Q29udHJvbGxlcjogTmF2Q29udHJvbGxlcikgewogICAgICAgICAgICAgfQogICAgICAgICB9CgorICAgICAgICAvLyDlt7LpmpDol4/mm7TmlrDorr7nva7lkozmk43kvZzljaHniYcKKyAgICAgICAgLyoKICAgICAgICAgU3BhY2VyKG1vZGlmaWVyID0gTW9kaWZpZXIuaGVpZ2h0KDguZHApKQoKICAgICAgICAgVGV4dCgKQEAgLTk5NSw2ICs5OTIsNyBAQCBmdW4gQXBwU2V0dGluZ3NTY3JlZW4obmF2Q29udHJvbGxlcjogTmF2Q29udHJvbGxlcikgewogICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgIH0KICAgICAgICAgfQorICAgICAgICAqLwogICAgIH0KIH0KCmRpZmYgLS1naXQgYS9jbGllbnRzL2FuZHJvaWQvYXBwL3NyYy9tYWluL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2Uvc2NyZWVuL3NldHRpbmdzL1NldHRpbmdzU2NyZWVuLmt0IGIvY2xpZW50cy9hbmRyb2lkL2FwcC9zcmMvbWFpbi9qYXZhL2lvL25la29oYXNla2FpL3NmYS9jb21wb3NlL3NjcmVlbi9zZXR0aW5ncy9TZXR0aW5nc1NjcmVlbi5rdAppbmRleCBmNDY4ZjUxLi4yYTM1MzEyIDEwMDY0NAotLS0gYS9jbGllbnRzL2FuZHJvaWQvYXBwL3NyYy9tYWluL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2Uvc2NyZWVuL3NldHRpbmdzL1NldHRpbmdzU2NyZWVuLmt0CisrKyBiL2NsaWVudHMvYW5kcm9pZC9hcHAvc3JjL21haW4vamF2YS9pby9uZWtvaGFzZWthaS9zZmEvY29tcG9zZS9zY3JlZW4vc2V0dGluZ3MvU2V0dGluZ3NTY3JlZW4ua3QKQEAgLTUxLDcgKzUxLDYgQEAgaW1wb3J0IGFuZHJvaWR4Lm5hdmlnYXRpb24uTmF2Q29udHJvbGxlcgogaW1wb3J0IGlvLm5la29oYXNla2FpLnNmYS5SCiBpbXBvcnQgaW8ubmVrb2hhc2VrYWkuc2ZhLmNvbXBvc2UudG9wYmFyLk92ZXJyaWRlVG9wQmFyCiBpbXBvcnQgaW8ubmVrb2hhc2VrYWkuc2ZhLmRhdGFiYXNlLlNldHRpbmdzCi1pbXBvcnQgaW8ubmVrb2hhc2VrYWkuc2ZhLnVwZGF0ZS5VcGRhdGVTdGF0ZQogaW1wb3J0IGlvLm5la29oYXNla2FpLnNmYS51dGlscy5Ib29rTW9kdWxlVXBkYXRlTm90aWZpZXIKIGltcG9ydCBpby5uZWtvaGFzZWthaS5zZmEudXRpbHMuSG9va1N0YXR1c0NsaWVudAoKQEAgLTY2LDcgKzY1LDYgQEAgZnVuIFNldHRpbmdzU2NyZWVuKG5hdkNvbnRyb2xsZXI6IE5hdkNvbnRyb2xsZXIpIHsKCiAgICAgdmFsIGNvbnRleHQgPSBMb2NhbENvbnRleHQuY3VycmVudAogICAgIHZhbCBzY29wZSA9IHJlbWVtYmVyQ29yb3V0aW5lU2NvcGUoKQotICAgIHZhbCBoYXNVcGRhdGUgYnkgVXBkYXRlU3RhdGUuaGFzVXBkYXRlCiAgICAgdmFsIGhvb2tTdGF0dXMgYnkgSG9va1N0YXR1c0NsaWVudC5zdGF0dXMuY29sbGVjdEFzU3RhdGUoKQogICAgIHZhbCBoYXNQZW5kaW5nUHJpdmlsZWdlRG93bmdyYWRlID0gSG9va01vZHVsZVVwZGF0ZU5vdGlmaWVyLmlzRG93bmdyYWRlKGhvb2tTdGF0dXMpCiAgICAgdmFsIGhhc1BlbmRpbmdQcml2aWxlZ2VVcGRhdGUgPSBIb29rTW9kdWxlVXBkYXRlTm90aWZpZXIuaXNVcGdyYWRlKGhvb2tTdGF0dXMpCkBAIC0xMTUsMTEgKzExMyw2IEBAIGZ1biBTZXR0aW5nc1NjcmVlbihuYXZDb250cm9sbGVyOiBOYXZDb250cm9sbGVyKSB7CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgdGludCA9IE1hdGVyaWFsVGhlbWUuY29sb3JTY2hlbWUucHJpbWFyeSwKICAgICAgICAgICAgICAgICAgICAgICAgICkKICAgICAgICAgICAgICAgICAgICAgfSwKLSAgICAgICAgICAgICAgICAgICAgdHJhaWxpbmdDb250ZW50ID0gewotICAgICAgICAgICAgICAgICAgICAgICAgaWYgKGhhc1VwZGF0ZSkgewotICAgICAgICAgICAgICAgICAgICAgICAgICAgIEJhZGdlKGNvbnRhaW5lckNvbG9yID0gTWF0ZXJpYWxUaGVtZS5jb2xvclNjaGVtZS5wcmltYXJ5KQotICAgICAgICAgICAgICAgICAgICAgICAgfQotICAgICAgICAgICAgICAgICAgICB9LAogICAgICAgICAgICAgICAgICAgICBtb2RpZmllciA9CiAgICAgICAgICAgICAgICAgICAgIE1vZGlmaWVyCiAgICAgICAgICAgICAgICAgICAgICAgICAuY2xpcChSb3VuZGVkQ29ybmVyU2hhcGUodG9wU3RhcnQgPSAxMi5kcCwgdG9wRW5kID0gMTIuZHApKQotLQoyLjUwLjEgKEFwcGxlIEdpdC0xNTUpCgo=" | base64 -d > ./streamline-update.patch
+          echo "RnJvbSAwYWU1MTEyZTkyNDAwZjQyZGMxYmQxM2QwZmVhZDMzNDY5M2NiOWMxIE1vbiBTZXAgMTcgMDA6MDA6MDAgMjAwMQpGcm9tOiByZUYxbmQgPHJlZjFuZEB0aHVuZGVyLWNsb3VkLmNjPgpEYXRlOiBXZWQsIDI0IERlYyAyMDI1IDIzOjEzOjAyICswODAwClN1YmplY3Q6IFtQQVRDSF0gPT9VVEYtOD9xP2ZlYXQ6PTIwPUU5PTlBPTkwPUU4PTk3PThGPUU4PUFFPUJFPUU3PUJEPUFFPz0KID0/VVRGLTg/cT89RTQ9Qjg9QUQ9RTc9OUE9ODQ9RTU9QkE9OTQ9RTc9OTQ9QTg9RTU9ODU9QTU9RTU9OEY9QTM9RTU9Qjk9QjY/PQogPT9VVEYtOD9xPz1FNz1BNj04MT1FNz05ND1BOD1FOD04Nz1BQT1FNT04QT1BOD1FNj05Qj1CND1FNj05Nj1CMD1FNT04QT05Rj89CiA9P1VURi04P3E/PUU4PTgzPUJEPz0KTUlNRS1WZXJzaW9uOiAxLjAKQ29udGVudC1UeXBlOiB0ZXh0L3BsYWluOyBjaGFyc2V0PVVURi04CkNvbnRlbnQtVHJhbnNmZXItRW5jb2Rpbmc6IDhiaXQKCi0g6ZqQ6JeP6K6+572u6aG16Z2i5Lit5bqU55So5Y2h54mH77yM5LiN5Yig6Zmk5Luj56CB5LuF5bGP6JS95YWl5Y+jCi0g56aB55So5omL5Yqo5qOA5p+l5pu05paw5oyJ6ZKu5ZKM6Ieq5Yqo5pu05paw5byA5YWzCi0g56aB55So5bqU55So5ZCv5Yqo5pe255qE6Ieq5Yqo5pu05paw5qOA5p+lCi0tLQogLi4uL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2UvTWFpbkFjdGl2aXR5Lmt0IHwgMTMgKysrKysrKysrKysrKwogLi4uL2NvbXBvc2Uvc2NyZWVuL3NldHRpbmdzL0FwcFNldHRpbmdzU2NyZWVuLmt0ICAgIHwgIDggKysrLS0tLS0KIC4uLi9zZmEvY29tcG9zZS9zY3JlZW4vc2V0dGluZ3MvU2V0dGluZ3NTY3JlZW4ua3QgICB8ICA3IC0tLS0tLS0KIDMgZmlsZXMgY2hhbmdlZCwgMTYgaW5zZXJ0aW9ucygrKSwgMTIgZGVsZXRpb25zKC0pCgpkaWZmIC0tZ2l0IGEvc2luZy1ib3gtZm9yLWFuZHJvaWQvYXBwL3NyYy9tYWluL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2UvTWFpbkFjdGl2aXR5Lmt0IGIvc2luZy1ib3gtZm9yLWFuZHJvaWQvYXBwL3NyYy9tYWluL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2UvTWFpbkFjdGl2aXR5Lmt0CmluZGV4IDU3NDQyMmIuLjFiMWI2YzkgMTAwNjQ0Ci0tLSBhL3NpbmctYm94LWZvci1hbmRyb2lkL2FwcC9zcmMvbWFpbi9qYXZhL2lvL25la29oYXNla2FpL3NmYS9jb21wb3NlL01haW5BY3Rpdml0eS5rdAorKysgYi9zaW5nLWJveC1mb3ItYW5kcm9pZC9hcHAvc3JjL21haW4vamF2YS9pby9uZWtvaGFzZWthaS9zZmEvY29tcG9zZS9NYWluQWN0aXZpdHkua3QKQEAgLTE5MSw2ICsxOTEsMTUgQEAgY2xhc3MgTWFpbkFjdGl2aXR5IDoKCiAgICAgICAgIGNvbm5lY3Rpb24ucmVjb25uZWN0KCkKCisgICAgICAgIC8vIOW8uuWItuemgeeUqOiHquWKqOabtOaWsOWKn+iDvQorICAgICAgICBTZXR0aW5ncy5jaGVja1VwZGF0ZUVuYWJsZWQgPSBmYWxzZQorICAgICAgICAvLyDmoIforrDkuLrlt7Lmj5DnpLrov4fvvIzpmLLmraLmmL7npLrpppbmrKHlkK/liqjnmoTmm7TmlrDmo4Dmn6Xlr7nor53moYYKKyAgICAgICAgU2V0dGluZ3MudXBkYXRlQ2hlY2tQcm9tcHRlZCA9IHRydWUKKyAgICAgICAgLy8g5riF6Zmk5Lu75L2V57yT5a2Y55qE5pu05paw54q25oCBCisgICAgICAgIFVwZGF0ZVN0YXRlLmNsZWFyKCkKKworICAgICAgICAvLyDoh6rliqjmm7TmlrDmo4Dmn6Xlt7LnpoHnlKgKKyAgICAgICAgLyoKICAgICAgICAgVXBkYXRlU3RhdGUubG9hZEZyb21DYWNoZSgpCiAgICAgICAgIGlmIChTZXR0aW5ncy5jaGVja1VwZGF0ZUVuYWJsZWQpIHsKICAgICAgICAgICAgIGxpZmVjeWNsZVNjb3BlLmxhdW5jaChEaXNwYXRjaGVycy5JTykgewpAQCAtMjAyLDYgKzIxMSw3IEBAIGNsYXNzIE1haW5BY3Rpdml0eSA6CiAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgfQogICAgICAgICB9CisgICAgICAgICovCgogICAgICAgICBoYW5kbGVJbnRlbnQoaW50ZW50KQoKQEAgLTQ2NSw2ICs0NzUsOCBAQCBjbGFzcyBNYWluQWN0aXZpdHkgOgogICAgICAgICAgICAgKQogICAgICAgICB9CgorICAgICAgICAvLyDpppbmrKHlkK/liqjnmoTmm7TmlrDmo4Dmn6Xmj5DnpLrlr7nor53moYblt7LnpoHnlKgKKyAgICAgICAgLyoKICAgICAgICAgLy8gSGFuZGxlIHVwZGF0ZSBjaGVjayBwcm9tcHQgZGlhbG9nIChzaG93biBvbmx5IG9uY2Ugb24gZmlyc3QgbGF1bmNoKQogICAgICAgICB2YXIgc2hvd1VwZGF0ZUNoZWNrUHJvbXB0IGJ5IHJlbWVtYmVyIHsgbXV0YWJsZVN0YXRlT2YoIVNldHRpbmdzLnVwZGF0ZUNoZWNrUHJvbXB0ZWQpIH0KICAgICAgICAgaWYgKHNob3dVcGRhdGVDaGVja1Byb21wdCkgewpAQCAtNTEzLDYgKzUyNSw3IEBAIGNsYXNzIE1haW5BY3Rpdml0eSA6CiAgICAgICAgICAgICAgICAgfSwKICAgICAgICAgICAgICkKICAgICAgICAgfQorICAgICAgICAqLwoKICAgICAgICAgLy8gSGFuZGxlIHVwZGF0ZSBhdmFpbGFibGUgZGlhbG9nCiAgICAgICAgIHZhbCB1cGRhdGVJbmZvIGJ5IFVwZGF0ZVN0YXRlLnVwZGF0ZUluZm8KZGlmZiAtLWdpdCBhL3NpbmctYm94LWZvci1hbmRyb2lkL2FwcC9zcmMvbWFpbi9qYXZhL2lvL25la29oYXNla2FpL3NmYS9jb21wb3NlL3NjcmVlbi9zZXR0aW5ncy9BcHBTZXR0aW5nc1NjcmVlbi5rdCBiL3NpbmctYm94LWZvci1hbmRyb2lkL2FwcC9zcmMvbWFpbi9qYXZhL2lvL25la29oYXNla2FpL3NmYS9jb21wb3NlL3NjcmVlbi9zZXR0aW5ncy9BcHBTZXR0aW5nc1NjcmVlbi5rdAppbmRleCA4YWE2ZDIxLi4xYzJmNzlhIDEwMDY0NAotLS0gYS9zaW5nLWJveC1mb3ItYW5kcm9pZC9hcHAvc3JjL21haW4vamF2YS9pby9uZWtvaGFzZWthaS9zZmEvY29tcG9zZS9zY3JlZW4vc2V0dGluZ3MvQXBwU2V0dGluZ3NTY3JlZW4ua3QKKysrIGIvc2luZy1ib3gtZm9yLWFuZHJvaWQvYXBwL3NyYy9tYWluL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2Uvc2NyZWVuL3NldHRpbmdzL0FwcFNldHRpbmdzU2NyZWVuLmt0CkBAIC00MDEsMTEgKzQwMSw2IEBAIGZ1biBBcHBTZXR0aW5nc1NjcmVlbihuYXZDb250cm9sbGVyOiBOYXZDb250cm9sbGVyKSB7CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgdGludCA9IE1hdGVyaWFsVGhlbWUuY29sb3JTY2hlbWUucHJpbWFyeSwKICAgICAgICAgICAgICAgICAgICAgICAgICkKICAgICAgICAgICAgICAgICAgICAgfSwKLSAgICAgICAgICAgICAgICAgICAgdHJhaWxpbmdDb250ZW50ID0gewotICAgICAgICAgICAgICAgICAgICAgICAgaWYgKGhhc1VwZGF0ZSkgewotICAgICAgICAgICAgICAgICAgICAgICAgICAgIEJhZGdlKGNvbnRhaW5lckNvbG9yID0gTWF0ZXJpYWxUaGVtZS5jb2xvclNjaGVtZS5wcmltYXJ5KSB7IFRleHQoIk5ldyIpIH0KLSAgICAgICAgICAgICAgICAgICAgICAgIH0KLSAgICAgICAgICAgICAgICAgICAgfSwKICAgICAgICAgICAgICAgICAgICAgbW9kaWZpZXIgPQogICAgICAgICAgICAgICAgICAgICBNb2RpZmllcgogICAgICAgICAgICAgICAgICAgICAgICAgLmNsaXAoUm91bmRlZENvcm5lclNoYXBlKHRvcFN0YXJ0ID0gMTIuZHAsIHRvcEVuZCA9IDEyLmRwKSksCkBAIC01MzUsNiArNTMwLDggQEAgZnVuIEFwcFNldHRpbmdzU2NyZWVuKG5hdkNvbnRyb2xsZXI6IE5hdkNvbnRyb2xsZXIpIHsKICAgICAgICAgICAgIH0KICAgICAgICAgfQoKKyAgICAgICAgLy8g5bey6ZqQ6JeP5pu05paw6K6+572u5ZKM5pON5L2c5Y2h54mHCisgICAgICAgIC8qCiAgICAgICAgIFNwYWNlcihtb2RpZmllciA9IE1vZGlmaWVyLmhlaWdodCg4LmRwKSkKCiAgICAgICAgIFRleHQoCkBAIC05OTUsNiArOTkyLDcgQEAgZnVuIEFwcFNldHRpbmdzU2NyZWVuKG5hdkNvbnRyb2xsZXI6IE5hdkNvbnRyb2xsZXIpIHsKICAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICB9CiAgICAgICAgIH0KKyAgICAgICAgKi8KICAgICB9CiB9CgpkaWZmIC0tZ2l0IGEvc2luZy1ib3gtZm9yLWFuZHJvaWQvYXBwL3NyYy9tYWluL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2Uvc2NyZWVuL3NldHRpbmdzL1NldHRpbmdzU2NyZWVuLmt0IGIvc2luZy1ib3gtZm9yLWFuZHJvaWQvYXBwL3NyYy9tYWluL2phdmEvaW8vbmVrb2hhc2VrYWkvc2ZhL2NvbXBvc2Uvc2NyZWVuL3NldHRpbmdzL1NldHRpbmdzU2NyZWVuLmt0CmluZGV4IGY0NjhmNTEuLjJhMzUzMTIgMTAwNjQ0Ci0tLSBhL3NpbmctYm94LWZvci1hbmRyb2lkL2FwcC9zcmMvbWFpbi9qYXZhL2lvL25la29oYXNla2FpL3NmYS9jb21wb3NlL3NjcmVlbi9zZXR0aW5ncy9TZXR0aW5nc1NjcmVlbi5rdAorKysgYi9zaW5nLWJveC1mb3ItYW5kcm9pZC9hcHAvc3JjL21haW4vamF2YS9pby9uZWtvaGFzZWthaS9zZmEvY29tcG9zZS9zY3JlZW4vc2V0dGluZ3MvU2V0dGluZ3NTY3JlZW4ua3QKQEAgLTUxLDcgKzUxLDYgQEAgaW1wb3J0IGFuZHJvaWR4Lm5hdmlnYXRpb24uTmF2Q29udHJvbGxlcgogaW1wb3J0IGlvLm5la29oYXNla2FpLnNmYS5SCiBpbXBvcnQgaW8ubmVrb2hhc2VrYWkuc2ZhLmNvbXBvc2UudG9wYmFyLk92ZXJyaWRlVG9wQmFyCiBpbXBvcnQgaW8ubmVrb2hhc2VrYWkuc2ZhLmRhdGFiYXNlLlNldHRpbmdzCi1pbXBvcnQgaW8ubmVrb2hhc2VrYWkuc2ZhLnVwZGF0ZS5VcGRhdGVTdGF0ZQogaW1wb3J0IGlvLm5la29oYXNla2FpLnNmYS51dGlscy5Ib29rTW9kdWxlVXBkYXRlTm90aWZpZXIKIGltcG9ydCBpby5uZWtvaGFzZWthaS5zZmEudXRpbHMuSG9va1N0YXR1c0NsaWVudAoKQEAgLTY2LDcgKzY1LDYgQEAgZnVuIFNldHRpbmdzU2NyZWVuKG5hdkNvbnRyb2xsZXI6IE5hdkNvbnRyb2xsZXIpIHsKCiAgICAgdmFsIGNvbnRleHQgPSBMb2NhbENvbnRleHQuY3VycmVudAogICAgIHZhbCBzY29wZSA9IHJlbWVtYmVyQ29yb3V0aW5lU2NvcGUoKQotICAgIHZhbCBoYXNVcGRhdGUgYnkgVXBkYXRlU3RhdGUuaGFzVXBkYXRlCiAgICAgdmFsIGhvb2tTdGF0dXMgYnkgSG9va1N0YXR1c0NsaWVudC5zdGF0dXMuY29sbGVjdEFzU3RhdGUoKQogICAgIHZhbCBoYXNQZW5kaW5nUHJpdmlsZWdlRG93bmdyYWRlID0gSG9va01vZHVsZVVwZGF0ZU5vdGlmaWVyLmlzRG93bmdyYWRlKGhvb2tTdGF0dXMpCiAgICAgdmFsIGhhc1BlbmRpbmdQcml2aWxlZ2VVcGRhdGUgPSBIb29rTW9kdWxlVXBkYXRlTm90aWZpZXIuaXNVcGdyYWRlKGhvb2tTdGF0dXMpCkBAIC0xMTUsMTEgKzExMyw2IEBAIGZ1biBTZXR0aW5nc1NjcmVlbihuYXZDb250cm9sbGVyOiBOYXZDb250cm9sbGVyKSB7CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgdGludCA9IE1hdGVyaWFsVGhlbWUuY29sb3JTY2hlbWUucHJpbWFyeSwKICAgICAgICAgICAgICAgICAgICAgICAgICkKICAgICAgICAgICAgICAgICAgICAgfSwKLSAgICAgICAgICAgICAgICAgICAgdHJhaWxpbmdDb250ZW50ID0gewotICAgICAgICAgICAgICAgICAgICAgICAgaWYgKGhhc1VwZGF0ZSkgewotICAgICAgICAgICAgICAgICAgICAgICAgICAgIEJhZGdlKGNvbnRhaW5lckNvbG9yID0gTWF0ZXJpYWxUaGVtZS5jb2xvclNjaGVtZS5wcmltYXJ5KQotICAgICAgICAgICAgICAgICAgICAgICAgfQotICAgICAgICAgICAgICAgICAgICB9LAogICAgICAgICAgICAgICAgICAgICBtb2RpZmllciA9CiAgICAgICAgICAgICAgICAgICAgIE1vZGlmaWVyCiAgICAgICAgICAgICAgICAgICAgICAgICAuY2xpcChSb3VuZGVkQ29ybmVyU2hhcGUodG9wU3RhcnQgPSAxMi5kcCwgdG9wRW5kID0gMTIuZHApKQotLQoyLjUwLjEgKEFwcGxlIEdpdC0xNTUpCg==" | base64 -d > ./streamline-update.patch
           git apply ./streamline-update.patch
+
+      - name: Build library
+        run: |-
+          cd ./sing-box/
+          make lib_install
+          export PATH="$PATH:$(go env GOPATH)/bin"
+          gomobile bind -v \
+            -o libbox.aar \
+            -target android \
+            -androidapi 23 \
+            -javapkg=io.nekohasekai \
+            -libname=box \
+            -trimpath \
+            -buildvcs=false \
+            -tags="${{ env.ref1nd_test_TAGS }}" \
+            -ldflags="-X github.com/sagernet/sing-box/constant.Version=${{ env.ref1nd_test_VERSION }} -X internal/godebug.defaultGODEBUG=multipathtcp=0 -s -w -buildid= -checklinkname=0" \
+            ./experimental/libbox/
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+
+      - name: Prepare Android client
+        run: |-
+          mkdir -p ./sing-box-for-android/app/libs/
+          cp -f ./sing-box/*.aar ./sing-box-for-android/app/libs/
 
       - name: Build `SFA-reF1nd-Test` apk
         run: |-
-          mkdir -p ./clients/android/app/libs/
-          cp -f  ./*.aar ./clients/android/app/libs/
-          cd ./clients/android
-          ./gradlew :app:assembleOtherRelease
+          cd ./sing-box-for-android/
+          chmod +x gradlew
+          ./gradlew :app:assembleOtherRelease \
+            -Pandroid.injected.signing.store.file=$(pwd)/app/release.keystore \
+            -Pandroid.injected.signing.store.password="${{ secrets.KEYSTORE_PASS }}" \
+            -Pandroid.injected.signing.key.alias="${{ secrets.ALIAS_NAME }}" \
+            -Pandroid.injected.signing.key.password="${{ secrets.ALIAS_PASS }}"
         env:
-          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
-          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
-          ALIAS_NAME: ${{ secrets.ALIAS_NAME }}
-          ALIAS_PASS: ${{ secrets.ALIAS_PASS }}
 
-      - name: Prepare upload
+      - name: Rename apks
         run: |-
           mkdir -p ./sfa-ref1nd-test/
-          for file in ./clients/android/app/build/outputs/apk/other/release/*.apk; do
+          for file in ./sing-box-for-android/app/build/outputs/apk/other/release/*.apk; do
             mv -f "${file}" "./sfa-ref1nd-test/$(basename "${file/SFA-*-reF1nd/SFA-ref1nd-test}")"
           done
 
@@ -406,7 +414,7 @@ jobs:
       singbox_stable_tags: ${{ steps.version.outputs.singbox_stable_tags }}
       singbox_stable_skip_update: ${{ steps.compare.outputs.skip_update }}
     steps:
-      - name: Checkout `stable`
+      - name: Checkout `SagerNet/sing-box`
         uses: actions/checkout@v6
         with:
           repository: SagerNet/sing-box
@@ -470,7 +478,7 @@ jobs:
       singbox_stable_VERSION: ${{ needs.singbox_stable_version.outputs.singbox_stable_version }}
       singbox_stable_TAGS: ${{ needs.singbox_stable_version.outputs.singbox_stable_tags }}
     steps:
-      - name: Checkout `stable`
+      - name: Checkout `SagerNet/sing-box`
         uses: actions/checkout@v6
         with:
           repository: SagerNet/sing-box
@@ -498,7 +506,7 @@ jobs:
       singbox_test_tags: ${{ steps.version.outputs.singbox_test_tags }}
       singbox_test_skip_update: ${{ steps.compare.outputs.skip_update }}
     steps:
-      - name: Checkout `testing`
+      - name: Checkout `SagerNet/sing-box`
         uses: actions/checkout@v6
         with:
           repository: SagerNet/sing-box
@@ -562,7 +570,7 @@ jobs:
       singbox_test_VERSION: ${{ needs.singbox_test_version.outputs.singbox_test_version }}
       singbox_test_TAGS: ${{ needs.singbox_test_version.outputs.singbox_test_tags }}
     steps:
-      - name: Checkout `testing`
+      - name: Checkout `SagerNet/sing-box`
         uses: actions/checkout@v6
         with:
           repository: SagerNet/sing-box
