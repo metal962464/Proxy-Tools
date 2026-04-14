@@ -57,7 +57,7 @@ jobs:
           mkdir -p ./mihomo/
           linux_archs=(amd64-v1 amd64-v3 armv5 armv6 armv7 arm64 mips-softfloat mipsle-softfloat mipsle-hardfloat)
           for i in "${!linux_archs[@]}"; do
-            curl -L "${download_url}/${meta_version}/mihomo-linux-${linux_archs[i]}-${meta_version}.gz" | gunzip -c > ./mihomo/mihomo-meta-linux-${linux_archs[i]}.upx
+            curl -sS -L "${download_url}/${meta_version}/mihomo-linux-${linux_archs[i]}-${meta_version}.gz" | gunzip -c > ./mihomo/mihomo-meta-linux-${linux_archs[i]}.upx
             chmod +x ./mihomo/mihomo-meta-linux-${linux_archs[i]}.upx
           done
 
@@ -66,8 +66,8 @@ jobs:
           windows_archs=(amd64-v1 amd64-v3 arm64)
           for j in "${!windows_archs[@]}"; do
             mkdir -p "./tmp-meta/meta_windows_${windows_archs[j]}"
-            wget -P "./tmp-meta/meta_windows_${windows_archs[j]}/" "${download_url}/${meta_version}/mihomo-windows-${windows_archs[j]}-${meta_version}.zip"
-            unzip -o "./tmp-meta/meta_windows_${windows_archs[j]}/mihomo-windows-${windows_archs[j]}-${meta_version}.zip" -d "./tmp-meta/meta_windows_${windows_archs[j]}/"
+            wget -q -P "./tmp-meta/meta_windows_${windows_archs[j]}/" "${download_url}/${meta_version}/mihomo-windows-${windows_archs[j]}-${meta_version}.zip"
+            unzip -q -o "./tmp-meta/meta_windows_${windows_archs[j]}/mihomo-windows-${windows_archs[j]}-${meta_version}.zip" -d "./tmp-meta/meta_windows_${windows_archs[j]}/"
             mv -f "./tmp-meta/meta_windows_${windows_archs[j]}/mihomo-windows-${windows_archs[j]}.exe" "./mihomo/mihomo-meta-windows-${windows_archs[j]}.exe"
           done
           rm -rf ./tmp-meta*
@@ -79,7 +79,7 @@ jobs:
           mkdir -p ./mihomo/
           linux_archs=(amd64-v1 amd64-v3 armv5 armv6 armv7 arm64 mips-softfloat mipsle-softfloat mipsle-hardfloat)
           for i in "${!linux_archs[@]}"; do
-            curl -L "${download_url}/Prerelease-Alpha/mihomo-linux-${linux_archs[i]}-${alpha_version}.gz" | gunzip -c > ./mihomo/mihomo-alpha-linux-${linux_archs[i]}.upx
+            curl -sS -L "${download_url}/Prerelease-Alpha/mihomo-linux-${linux_archs[i]}-${alpha_version}.gz" | gunzip -c > ./mihomo/mihomo-alpha-linux-${linux_archs[i]}.upx
             chmod +x ./mihomo/mihomo-alpha-linux-${linux_archs[i]}.upx
           done
 
@@ -88,8 +88,8 @@ jobs:
           windows_archs=(amd64-v1 amd64-v3 arm64)
           for j in "${!windows_archs[@]}"; do
             mkdir -p "./tmp-alpha/alpha_windows_${windows_archs[j]}"
-            wget -P "./tmp-alpha/alpha_windows_${windows_archs[j]}/" "${download_url}/Prerelease-Alpha/mihomo-windows-${windows_archs[j]}-${alpha_version}.zip"
-            unzip -o "./tmp-alpha/alpha_windows_${windows_archs[j]}/mihomo-windows-${windows_archs[j]}-${alpha_version}.zip" -d "./tmp-alpha/alpha_windows_${windows_archs[j]}/"
+            wget -q -P "./tmp-alpha/alpha_windows_${windows_archs[j]}/" "${download_url}/Prerelease-Alpha/mihomo-windows-${windows_archs[j]}-${alpha_version}.zip"
+            unzip -q -o "./tmp-alpha/alpha_windows_${windows_archs[j]}/mihomo-windows-${windows_archs[j]}-${alpha_version}.zip" -d "./tmp-alpha/alpha_windows_${windows_archs[j]}/"
             mv -f "./tmp-alpha/alpha_windows_${windows_archs[j]}/mihomo-windows-${windows_archs[j]}.exe" "./mihomo/mihomo-alpha-windows-${windows_archs[j]}.exe"
           done
           rm -rf ./tmp-alpha*
