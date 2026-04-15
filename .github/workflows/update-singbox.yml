@@ -305,7 +305,8 @@ jobs:
         run: |-
           mkdir -p ./sfa-ref1nd-stable/
           for file in ./sing-box-for-android/app/build/outputs/apk/other/release/*.apk; do
-            mv -f "${file}" "./sfa-ref1nd-stable/$(basename "${file/SFA-*-reF1nd/SFA-ref1nd-stable}")"
+            newname=$(basename "$file" | sed -E 's/^SFA-.*-reF1nd(\.[0-9]+)?/SFA-ref1nd-stable/')
+            mv -f "${file}" "./sfa-ref1nd-stable/${newname}"
           done
 
       - name: Upload files to workspace
@@ -411,7 +412,8 @@ jobs:
         run: |-
           mkdir -p ./sfa-ref1nd-test/
           for file in ./sing-box-for-android/app/build/outputs/apk/other/release/*.apk; do
-            mv -f "${file}" "./sfa-ref1nd-test/$(basename "${file/SFA-*-reF1nd/SFA-ref1nd-test}")"
+            newname=$(basename "$file" | sed -E 's/^SFA-.*-reF1nd(\.[0-9]+)?/SFA-ref1nd-test/')
+            mv -f "${file}" "./sfa-ref1nd-test/${newname}"
           done
 
       - name: Upload files to workspace
