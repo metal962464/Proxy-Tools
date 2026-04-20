@@ -13,6 +13,9 @@ on:
       - ".github/workflows/update-dashboard.yml"
       - ".github/workflows/update-mihomo.yml"
 
+permissions:
+  contents: write
+
 jobs:
   go:
     runs-on: ubuntu-latest

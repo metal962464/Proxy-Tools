@@ -13,6 +13,9 @@ on:
       - ".github/workflows/update-dashboard.yml"
       - ".github/workflows/update-singbox.yml"
 
+permissions:
+  contents: write
+
 jobs:
   Update:
     runs-on: ubuntu-latest
